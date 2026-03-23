@@ -2,13 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FaIconLibrary, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FaIconComponent],
   templateUrl: './login.html',
+  styleUrl: './login.css',
 })
 export class Login implements OnInit {
   loginForm!: FormGroup;
@@ -19,7 +20,7 @@ export class Login implements OnInit {
   error = '';
 
   constructor(private fb: FormBuilder, library: FaIconLibrary) {
-    library.addIcons(faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus);
+    library.addIcons(faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart);
   }
 
   ngOnInit() {
