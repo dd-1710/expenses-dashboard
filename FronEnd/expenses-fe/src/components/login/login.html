@@ -1,18 +1,14 @@
 <div class="min-h-screen flex flex-col md:flex-row">
 
-    <!-- Left: Hero Panel -->
     <div class="hidden md:flex md:w-[55%] bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900 text-white flex-col justify-center px-14 py-16 relative overflow-hidden">
-        <!-- Subtle ambient glow -->
         <div class="absolute top-20 right-16 w-64 h-64 bg-emerald-500/8 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-20 -left-10 w-72 h-72 bg-blue-500/8 rounded-full blur-3xl"></div>
 
-        <!-- Badge -->
         <div class="inline-flex items-center gap-2 bg-white/8 backdrop-blur-md rounded-full px-4 py-1.5 mb-8 w-fit border border-white/10">
             <span class="text-emerald-400 text-sm font-bold">&#8377;</span>
             <span class="text-xs font-semibold tracking-wide uppercase text-slate-300">Expenses Tracker</span>
         </div>
 
-        <!-- Headline -->
         <h1 class="text-4xl font-extrabold leading-tight tracking-tight text-white">
             Know where every<br/><span class="text-emerald-400">rupee goes.</span>
         </h1>
@@ -20,7 +16,6 @@
             Track daily expenses, review transaction history, and understand your spending patterns with clear, actionable insights.
         </p>
 
-        <!-- Feature grid -->
         <div class="grid grid-cols-2 gap-3 mt-10">
             <div class="bg-white/5 hover:bg-white/8 rounded-xl p-4 transition-all duration-300 border border-white/5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center mb-3">
@@ -52,27 +47,43 @@
             </div>
         </div>
 
-        <!-- Bottom strip -->
         <div class="mt-10 pt-6 border-t border-white/5 flex items-center gap-2 text-slate-500 text-xs">
             <fa-icon [icon]="['fas', 'heart']" class="text-emerald-500/50 text-[10px]"></fa-icon>
             <span>A simple way to track your daily expenses.</span>
         </div>
     </div>
 
-    <!-- Right: Login Form -->
-    <div class="flex-1 flex items-center justify-center bg-white px-6 py-12 md:px-16">
+    <div class="md:hidden bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white px-6 pt-10 pb-8 relative overflow-hidden">
+        <div class="absolute top-4 right-4 w-32 h-32 bg-emerald-500/8 rounded-full blur-2xl"></div>
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <span class="text-emerald-400 text-base font-bold">&#8377;</span>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold">Expenses Tracker</h1>
+                <p class="text-slate-400 text-xs">Know where every rupee goes</p>
+            </div>
+        </div>
+        <!-- Mini feature pills -->
+        <div class="flex flex-wrap gap-2 mt-2">
+            <span class="inline-flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1 text-[11px] text-slate-300 border border-white/5">
+                <fa-icon [icon]="['fas', 'plus']" class="text-emerald-400 text-[9px]"></fa-icon> Add Expenses
+            </span>
+            <span class="inline-flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1 text-[11px] text-slate-300 border border-white/5">
+                <fa-icon [icon]="['fas', 'list']" class="text-emerald-400 text-[9px]"></fa-icon> View History
+            </span>
+            <span class="inline-flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1 text-[11px] text-slate-300 border border-white/5">
+                <fa-icon [icon]="['fas', 'chart-pie']" class="text-emerald-400 text-[9px]"></fa-icon> Charts
+            </span>
+        </div>
+    </div>
+
+    <!-- Right / Bottom: Login Form -->
+    <div class="flex-1 flex items-center justify-center bg-white px-5 py-8 sm:px-8 sm:py-12 md:px-16">
         <div class="w-full max-w-sm">
 
-            <!-- Mobile-only branding -->
-            <div class="md:hidden text-center mb-8">
-                <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center mx-auto mb-3">
-                    <span class="text-emerald-400 text-lg font-bold">&#8377;</span>
-                </div>
-                <h2 class="text-lg font-bold text-slate-800">Expenses Tracker</h2>
-            </div>
-
             <!-- Toggle -->
-            <div class="flex rounded-lg bg-slate-100 p-1 mb-8">
+            <div class="flex rounded-lg bg-slate-100 p-1 mb-6 sm:mb-8">
                 <button type="button" (click)="setMode(false)"
                     [ngClass]="isSignUp ? 'text-slate-500' : 'bg-white text-slate-900 shadow-sm'"
                     class="flex-1 rounded-md py-2.5 text-sm font-semibold transition-all duration-200 outline-none">
@@ -86,8 +97,8 @@
             </div>
 
             <!-- Heading -->
-            <div class="mb-6">
-                <h1 class="text-xl font-bold text-slate-900">{{ isSignUp ? 'Create Account' : 'Welcome back' }}</h1>
+            <div class="mb-5 sm:mb-6">
+                <h1 class="text-lg sm:text-xl font-bold text-slate-900">{{ isSignUp ? 'Create Account' : 'Welcome back' }}</h1>
                 <p class="text-slate-400 mt-1 text-sm">{{ isSignUp ? 'Start managing your expenses today' : 'Sign in to your dashboard' }}</p>
             </div>
 
@@ -100,7 +111,7 @@
                     <div class="relative">
                         <fa-icon [icon]="['fas', 'user']" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></fa-icon>
                         <input id="username" type="text" formControlName="username" placeholder="Enter your username"
-                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 outline-none focus:border-emerald-500 focus:bg-white transition-all text-sm" />
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400/20 outline-none focus:border-slate-400 focus:bg-white transition-all text-sm" />
                     </div>
                     @if (username?.touched && username?.invalid) {
                     <p class="mt-1 text-xs text-red-500">
@@ -113,7 +124,7 @@
                     }
                 </div>
 
-                <div class="mb-6">
+                <div class="mb-5 sm:mb-6">
                     <label for="password" class="block text-xs font-medium text-slate-500 mb-1.5">
                         Password
                     </label>
@@ -121,7 +132,7 @@
                         <fa-icon [icon]="['fas', 'lock']" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></fa-icon>
                         <input id="password" [type]="showPassword ? 'text' : 'password'" formControlName="password"
                             placeholder="Enter your password"
-                            class="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 outline-none focus:border-emerald-500 focus:bg-white transition-all text-sm" />
+                            class="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400/20 outline-none focus:border-slate-400 focus:bg-white transition-all text-sm" />
                         <button type="button" (click)="toggleShowPassword()"
                             class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors">
                             <fa-icon [icon]="showPassword ? ['fas', 'eye-slash'] : ['fas', 'eye']" class="text-sm"></fa-icon>
@@ -145,7 +156,7 @@
                 }
 
                 <button type="submit" [disabled]="loginForm.invalid || loading"
-                    class="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 text-sm">
+                    class="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 text-sm">
                     @if (loading) {
                         <span>{{ isSignUp ? 'Creating Account...' : 'Signing In...' }}</span>
                     } @else {
@@ -154,6 +165,9 @@
                     }
                 </button>
             </form>
+
+            <!-- Mobile footer -->
+            <p class="md:hidden text-center text-slate-300 text-[11px] mt-6">A simple way to track your daily expenses.</p>
 
         </div>
     </div>
