@@ -1,4 +1,13 @@
 <header class="bg-slate-900 text-white px-4 sm:px-6 py-3 sm:py-4 shadow-lg flex items-center gap-2">
-    <span class="text-emerald-400 font-bold text-sm sm:text-base">&#8377;</span>
+    <fa-icon [icon]="['fas','indian-rupee-sign']" class="text-emerald-400 font-bold text-sm sm:text-base"></fa-icon>
     <span class="text-sm sm:text-base font-semibold">Expenses Tracker</span>
+
+    <button class="ml-auto inline-flex items-center gap-1.5 bg-gradient-to-b from-emerald-400 to-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-all duration-200 shadow-[0_2px_8px_rgba(16,185,129,0.4)] ring-1 ring-emerald-400/30 ring-inset">
+    <fa-icon [icon]="['fas','plus']" class="text-[10px]"></fa-icon>
+    Add Expense
+    </button>
+<!-- 
+   <button class="p-2 rounded-lg hover:bg-white/10 transition-colors duration-200">
+    <fa-icon [icon]="isDarkMode ? ['fas', 'sun'] : ['fas', 'moon']" class="text-slate-300 text-sm"></fa-icon>
+</button> -->
 </header>

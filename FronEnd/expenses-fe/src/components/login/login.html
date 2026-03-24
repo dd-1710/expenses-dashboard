@@ -5,7 +5,7 @@
         <div class="absolute -bottom-20 -left-10 w-72 h-72 bg-blue-500/8 rounded-full blur-3xl"></div>
 
         <div class="inline-flex items-center gap-2 bg-white/8 backdrop-blur-md rounded-full px-4 py-1.5 mb-8 w-fit border border-white/10">
-            <span class="text-emerald-400 text-sm font-bold">&#8377;</span>
+            <fa-icon [icon]="['fas','indian-rupee-sign']" class="text-emerald-400 text-sm font-bold"></fa-icon>
             <span class="text-xs font-semibold tracking-wide uppercase text-slate-300">Expenses Tracker</span>
         </div>
 
@@ -105,19 +105,19 @@
             <!-- Form -->
             <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
                 <div class="mb-4">
-                    <label for="username" class="block text-xs font-medium text-slate-500 mb-1.5">
-                        Username
+                    <label for="userName" class="block text-xs font-medium text-slate-500 mb-1.5">
+                        UserName
                     </label>
                     <div class="relative">
                         <fa-icon [icon]="['fas', 'user']" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></fa-icon>
-                        <input id="username" type="text" formControlName="username" placeholder="Enter your username"
+                        <input id="userName" type="text" formControlName="userName" placeholder="Enter your userName"
                             class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400/20 outline-none focus:border-slate-400 focus:bg-white transition-all text-sm" />
                     </div>
-                    @if (username?.touched && username?.invalid) {
+                    @if (userName?.touched && userName?.invalid) {
                     <p class="mt-1 text-xs text-red-500">
-                        @if (username?.errors?.['required']) {
-                        <span>Username is required.</span>
-                        } @else if (username?.errors?.['minlength']) {
+                        @if (userName?.errors?.['required']) {
+                        <span>UserName is required.</span>
+                        } @else if (userName?.errors?.['minlength']) {
                         <span>At least 3 characters.</span>
                         }
                     </p>
@@ -143,15 +143,20 @@
                         @if (password?.errors?.['required']) {
                         <span>Password is required.</span>
                         } @else if (password?.errors?.['minlength']) {
-                        <span>At least 8 characters.</span>
+                        <span>At least 4 characters.</span>
                         }
                     </p>
                     }
                 </div>
 
-                @if (error) {
-                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
-                    {{ error }}
+                @if(error){
+                 <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+                    {{error}}
+                 </div>
+                }
+                @if (success) {
+                <div class="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-600 text-xs">
+                    {{ success }}
                 </div>
                 }
 

@@ -1,9 +1,18 @@
 import { Component } from '@angular/core';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { faIndianRupeeSign,faPlus,faSun,faMoon } from '@fortawesome/free-solid-svg-icons';
 @Component({
   selector: 'app-header',
-  imports: [FontAwesomeModule],
+  imports: [FaIconComponent],
   templateUrl: './header.html',
   styleUrl: './header.css',
+  standalone: true
 })
-export class Header {}
+export class Header {
+  constructor(library: FaIconLibrary){
+    library.addIcons(faIndianRupeeSign,faPlus,faSun,faMoon)
+
+  }
+
+  isDarkMode:boolean = false;
+}

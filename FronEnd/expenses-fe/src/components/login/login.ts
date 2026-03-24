@@ -2,8 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FaIconLibrary, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart } from '@fortawesome/free-solid-svg-icons';
-
+import { faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart ,faIndianRupeeSign } from '@fortawesome/free-solid-svg-icons';
+import { UserService } from '../../services/userService';
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -17,10 +18,12 @@ export class Login implements OnInit {
   showPassword = false;
   showConfirmPassword = false;
   loading = false;
+  success = '';
   error = '';
+  
 
-  constructor(private fb: FormBuilder, library: FaIconLibrary) {
-    library.addIcons(faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart);
+  constructor(private fb: FormBuilder, library: FaIconLibrary,private userService:UserService,private router:Router) {
+    library.addIcons(faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart, faIndianRupeeSign);
   }
 
   ngOnInit() {
@@ -29,8 +32,8 @@ export class Login implements OnInit {
 
   buildForm() {
     this.loginForm = this.fb.group({
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      password: ['', [Validators.required, Validators.minLength(8)]]
+      userName: ['', [Validators.required, Validators.minLength(3)]],
+      password: ['', [Validators.required, Validators.minLength(4)]]
     });
   }
 
@@ -38,6 +41,7 @@ export class Login implements OnInit {
   setMode(mode: boolean) {
     this.isSignUp = mode;
     this.error = '';
+    this.success = '';
     this.loginForm.reset();
   }
 
@@ -50,20 +54,45 @@ export class Login implements OnInit {
   }
 
   submit() {
+    this.success = '';
     this.error = '';
-    if (this.loginForm.invalid) {
-      this.error = 'Please complete all required fields.';
-      return;
+    const {userName,password} = this.loginForm.value;
+    if (this.isSignUp) {
+      this.userService.signUp(userName, password).subscribe({
+        next: (res) => {
+          this.success = res.message;
+          setTimeout(()=>{
+             this.success = '';
+             this.setMode(false);
+          },3000)
+        },
+        error: (err) => {
+          this.error = err.error?.message;
+          setTimeout(()=>{
+          this.error = '';
+          },3000)
+        }
+      })
+
+    } else {
+      this.userService.signIn(userName,password).subscribe({
+        next: (res)=>{
+          this.success = res.message;
+          this.success = '';
+          this.router.navigate(['/dashboard'])       
+        },
+        error: (err)=>{
+          this.error = err.error?.message;
+          setTimeout(() => {
+             this.error = '';
+          }, 3000);
+        }
+      })
+
     }
 
-    this.loading = true;
-    setTimeout(() => {
-      alert(this.isSignUp ? 'Account created successfully!' : 'Signed in successfully!');
-      this.loading = false;
-      this.loginForm.reset();
-    }, 1000);
   }
 
-  get username() { return this.loginForm.get('username'); }
+  get userName() { return this.loginForm.get('userName'); }
   get password() { return this.loginForm.get('password'); }
 }
