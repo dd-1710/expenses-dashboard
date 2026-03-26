@@ -3,14 +3,15 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { FontAwesomeModule,FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { faWallet } from '@fortawesome/free-solid-svg-icons';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from '../services/auth.interceptor';
 
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([authInterceptor])),
     provideZoneChangeDetection(),
   ]
 

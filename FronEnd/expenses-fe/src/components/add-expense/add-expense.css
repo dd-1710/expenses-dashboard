@@ -1,0 +1,8 @@
+input[type="date"]::-webkit-datetime-edit {
+  color: #94a3b8;
+}
+
+input[type="date"]:focus::-webkit-datetime-edit,
+input[type="date"].ng-dirty::-webkit-datetime-edit {
+  color: #334155;
+}

@@ -67,7 +67,7 @@ export class Login implements OnInit {
           },3000)
         },
         error: (err) => {
-          this.error = err.error?.message;
+          this.error = err.error?.message || "Server is Down";
           setTimeout(()=>{
           this.error = '';
           },3000)
@@ -79,10 +79,12 @@ export class Login implements OnInit {
         next: (res)=>{
           this.success = res.message;
           this.success = '';
+          sessionStorage.setItem('token',res.token);
+          sessionStorage.setItem('userName',userName);
           this.router.navigate(['/dashboard'])       
         },
         error: (err)=>{
-          this.error = err.error?.message;
+          this.error = err.error?.message || "Server is Down";
           setTimeout(() => {
              this.error = '';
           }, 3000);

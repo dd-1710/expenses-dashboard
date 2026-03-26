@@ -212,6 +212,14 @@
   optionalDependencies:
     lmdb "3.5.1"
 
+"@angular/cdk@>=21.0.0":
+  version "21.2.3"
+  resolved "https://infyartifactory.jfrog.io/artifactory/api/npm/icets-ai_npm_virtual/@angular/cdk/-/cdk-21.2.3.tgz"
+  integrity sha512-7t+UhfbSpIUG9uUyL4b8nI/HyYyrbgAvDwBT8kH4D7If0WiFQhUoottAM0+WZ7Uy+F4nx322K6TOomz/fZJOoQ==
+  dependencies:
+    parse5 "^8.0.0"
+    tslib "^2.3.0"
+
 "@angular/cli@^21.2.3":
   version "21.2.3"
   resolved "https://registry.npmjs.org/@angular/cli/-/cli-21.2.3.tgz"
@@ -236,7 +244,7 @@
     yargs "18.0.0"
     zod "4.3.6"
 
-"@angular/common@^21.2.0", "@angular/common@21.2.5":
+"@angular/common@^21.0.0 || ^22.0.0", "@angular/common@^21.2.0", "@angular/common@>=21.0.0", "@angular/common@21.2.5":
   version "21.2.5"
   resolved "https://registry.npmjs.org/@angular/common/-/common-21.2.5.tgz"
   integrity sha512-MTjCbsHBkF9W12CW9yYiTJdVfZv/qCqBCZ2iqhMpDA5G+ZJiTKP0IDTJVrx2N5iHfiJ1lnK719t/9GXROtEAvg==
@@ -264,7 +272,7 @@
   dependencies:
     tslib "^2.3.0"
 
-"@angular/core@^21.0.0", "@angular/core@^21.2.0", "@angular/core@21.2.5":
+"@angular/core@^21.0.0", "@angular/core@^21.0.0 || ^22.0.0", "@angular/core@^21.2.0", "@angular/core@>=21.0.0", "@angular/core@21.2.5":
   version "21.2.5"
   resolved "https://registry.npmjs.org/@angular/core/-/core-21.2.5.tgz"
   integrity sha512-JgHU134Adb1wrpyGC9ozcv3hiRAgaFTvJFn1u9OU/AVXyxu4meMmVh2hp5QhAvPnv8XQdKWWIkAY+dbpPE6zKA==
@@ -279,7 +287,7 @@
     "@standard-schema/spec" "^1.0.0"
     tslib "^2.3.0"
 
-"@angular/platform-browser@^21.0.0", "@angular/platform-browser@^21.2.0", "@angular/platform-browser@21.2.5":
+"@angular/platform-browser@^21.0.0", "@angular/platform-browser@^21.0.0 || ^22.0.0", "@angular/platform-browser@^21.2.0", "@angular/platform-browser@>=21.0.0", "@angular/platform-browser@21.2.5":
   version "21.2.5"
   resolved "https://registry.npmjs.org/@angular/platform-browser/-/platform-browser-21.2.5.tgz"
   integrity sha512-VuuYguxjgyI4XWuoXrKynmuA3FB991pXbkNhxHeCW0yX+7DGOnGLPF1oierd4/X+IvskmN8foBZLfjyg9u4Ffg==
@@ -777,6 +785,11 @@
   dependencies:
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
+
+"@kurkle/color@^0.3.0":
+  version "0.3.4"
+  resolved "https://infyartifactory.jfrog.io/artifactory/api/npm/icets-ai_npm_virtual/@kurkle/color/-/color-0.3.4.tgz"
+  integrity sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==
 
 "@listr2/prompt-adapter-inquirer@3.0.5":
   version "3.0.5"
@@ -1428,6 +1441,13 @@ chardet@^2.1.1:
   resolved "https://registry.npmjs.org/chardet/-/chardet-2.1.1.tgz"
   integrity sha512-PsezH1rqdV9VvyNhxxOW32/d75r01NY7TQCmOqomRo15ZSOKbpTFVsfjghxo6JloQUCGnH4k1LGu0R4yCLlWQQ==
 
+"chart.js@^3.4.0 || ^4.0.0", chart.js@^4.5.1:
+  version "4.5.1"
+  resolved "https://infyartifactory.jfrog.io/artifactory/api/npm/icets-ai_npm_virtual/chart.js/-/chart.js-4.5.1.tgz"
+  integrity sha512-GIjfiT9dbmHRiYi6Nl2yFCq7kkwdkp1W/lp2J99rX0yo9tgJGn3lKQATztIjb5tVtevcBtIdICNWqlq5+E8/Pw==
+  dependencies:
+    "@kurkle/color" "^0.3.0"
+
 chokidar@^4.0.0:
   version "4.0.3"
   resolved "https://registry.npmjs.org/chokidar/-/chokidar-4.0.3.tgz"
@@ -1732,6 +1752,11 @@ es-object-atoms@^1.0.0, es-object-atoms@^1.1.1:
   integrity sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==
   dependencies:
     es-errors "^1.3.0"
+
+es-toolkit@^1.39.7:
+  version "1.45.1"
+  resolved "https://infyartifactory.jfrog.io/artifactory/api/npm/icets-ai_npm_virtual/es-toolkit/-/es-toolkit-1.45.1.tgz"
+  integrity sha512-/jhoOj/Fx+A+IIyDNOvO3TItGmlMKhtX8ISAHKE90c4b/k1tqaqEZ+uUqfpU8DMnW5cgNJv606zS55jGvza0Xw==
 
 esbuild@^0.27.0, esbuild@0.27.3:
   version "0.27.3"
@@ -2505,6 +2530,14 @@ negotiator@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/negotiator/-/negotiator-1.0.0.tgz"
   integrity sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==
+
+ng2-charts@^10.0.0:
+  version "10.0.0"
+  resolved "https://infyartifactory.jfrog.io/artifactory/api/npm/icets-ai_npm_virtual/ng2-charts/-/ng2-charts-10.0.0.tgz"
+  integrity sha512-mdL75XJrk/0s0YO2ySPQpAHPja85ECDEGNWFlcElJiy/bYliTNGEpeCtctAqZuozTff/E2CwGjyfPFM1ScP2og==
+  dependencies:
+    es-toolkit "^1.39.7"
+    tslib "^2.3.0"
 
 node-addon-api@^6.1.0:
   version "6.1.0"
