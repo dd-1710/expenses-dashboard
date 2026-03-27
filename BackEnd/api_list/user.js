@@ -18,7 +18,7 @@ router.post('/signUp',async(req,res)=>{
         res.status(201).json({message:"User Created Successfully!"});
     }
     catch(err){
-        res.status(500).json({message:'Server Error',err});
+        res.status(500).json({message:'Server Error',error:err.message});
     }
 });
 
@@ -37,7 +37,7 @@ router.post('/signIn',async(req,res)=>{
         res.status(200).json({message:"Logged In Successfully!",token});
     }
     catch(err){
-        res.status(500).json({message:"Server Error",err})
+        res.status(500).json({message:"Server Error",error:err.message})
     }
 })
 

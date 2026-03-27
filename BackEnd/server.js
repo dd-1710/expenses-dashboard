@@ -3,6 +3,7 @@ const cors = require('cors');
 const mgdb = require('mongoose');
 require('dotenv').config();
 const userAPI = require('./api_list/user')
+const addexpenseAPI = require('./api_list/expenses');
 
 const app = express();
 const PORT = process.env.PORT 
@@ -11,6 +12,7 @@ app.use(express.json());
 
 //APIS
 app.use('/api',userAPI)
+app.use('/api',addexpenseAPI)
 
 mgdb.connect(process.env.MONGO_URI).then(()=>{console.log("MONGO Connected")}).catch((err)=>{console.log("There is issue while connecting DB",err)})
 
