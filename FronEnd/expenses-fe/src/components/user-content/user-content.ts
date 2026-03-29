@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { expensesService } from '../../services/expensesService';
 import { addExpense } from '../../interfaces/addExpense.model';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt } from '@fortawesome/free-solid-svg-icons';
+import { faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from '../add-expense/add-expense';
 import { BaseChartDirective } from 'ng2-charts';
 import { ArcElement, BarController, BarElement, CategoryScale, Chart, ChartData, DoughnutController, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js';
@@ -50,9 +50,11 @@ export class UserContent {
   'Investment': '#34D399',
   'Others': '#C9CBCF'
 };
+   userText: any = '';
+   messages:any = [];
 
   constructor(private expenseSer:expensesService, library:FaIconLibrary){
-   library.addIcons(faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck)
+   library.addIcons(faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane)
   }
   ngOnInit(){
    this.userMessage();
@@ -237,6 +239,21 @@ export class UserContent {
       fill: true
     }]
   };
+  }
+                                                                     
+
+  useAIChat(userText:string){
+    if(!userText.trim())return;
+    this.messages.push({text:userText,isUser:true});
+    this.userText = '';
+    this.expenseSer.aiChat(userText).subscribe({
+      next: res=>{
+        this.messages.push({text:res.reply,isUser:false});        
+      },
+      error: err=>{
+          this.messages.push({text:'Something went wrong. Try again.', isUser: false })
+      }
+    })
   }
   
 }
