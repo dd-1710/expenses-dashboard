@@ -13,7 +13,7 @@ export class expensesService {
 
     }
 
-    apiURL = environment.backendUrl;
+    apiURL = environment.backendURL;
 
     addExpense(expense: addExpense): Observable<any> {
         return this.http.post(`${this.apiURL}/api/add-expense`, expense)
