@@ -10,7 +10,6 @@ const PORT = process.env.PORT
 app.use(cors());
 app.use(express.json());
 
-//APIS
 app.use('/api',userAPI)
 app.use('/api',addexpenseAPI)
 

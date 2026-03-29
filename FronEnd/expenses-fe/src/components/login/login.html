@@ -64,7 +64,6 @@
                 <p class="text-slate-400 text-xs">Know where every rupee goes</p>
             </div>
         </div>
-        <!-- Mini feature pills -->
         <div class="flex flex-wrap gap-2 mt-2">
             <span class="inline-flex items-center gap-1.5 bg-white/8 rounded-full px-3 py-1 text-[11px] text-slate-300 border border-white/5">
                 <fa-icon [icon]="['fas', 'plus']" class="text-emerald-400 text-[9px]"></fa-icon> Add Expenses
@@ -78,11 +77,9 @@
         </div>
     </div>
 
-    <!-- Right / Bottom: Login Form -->
     <div class="flex-1 flex items-center justify-center bg-white px-5 py-8 sm:px-8 sm:py-12 md:px-16">
         <div class="w-full max-w-sm">
 
-            <!-- Toggle -->
             <div class="flex rounded-lg bg-slate-100 p-1 mb-6 sm:mb-8">
                 <button type="button" (click)="setMode(false)"
                     [ngClass]="isSignUp ? 'text-slate-500' : 'bg-white text-slate-900 shadow-sm'"
@@ -96,13 +93,11 @@
                 </button>
             </div>
 
-            <!-- Heading -->
             <div class="mb-5 sm:mb-6">
                 <h1 class="text-lg sm:text-xl font-bold text-slate-900">{{ isSignUp ? 'Create Account' : 'Welcome back' }}</h1>
                 <p class="text-slate-400 mt-1 text-sm">{{ isSignUp ? 'Start managing your expenses today' : 'Sign in to your dashboard' }}</p>
             </div>
 
-            <!-- Form -->
             <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
                 <div class="mb-4">
                     <label for="userName" class="block text-xs font-medium text-slate-500 mb-1.5">
@@ -171,7 +166,6 @@
                 </button>
             </form>
 
-            <!-- Mobile footer -->
             <p class="md:hidden text-center text-slate-300 text-[11px] mt-6">A simple way to track your daily expenses.</p>
 
         </div>

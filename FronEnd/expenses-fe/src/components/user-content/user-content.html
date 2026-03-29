@@ -1,1 +1,402 @@
-<p>user-content works!</p>
+<div class="min-h-screen bg-slate-50 dark:bg-neutral-950 p-4 sm:p-6 md:p-8 transition-colors duration-300">
+  <div class="mb-5 sm:mb-6">
+    @if(isEditingForm){
+     <app-add-expense (close)="isEditingForm=false" [editedData]="selectExp" (fetchExpData)="fetchAllExpenses()"></app-add-expense>
+    }
+
+    <div class="mb-4">
+      <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 dark:text-neutral-100">
+        {{greet}}, <span class="text-emerald-500">{{userName}}</span>
+        <fa-icon [icon]="['fas','handshake']" class="text-emerald-400"></fa-icon>
+      </h1>
+      <p class="text-slate-400 dark:text-neutral-500 text-sm mt-1">Here's your expense summary</p>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+
+      <div class="bg-white dark:bg-neutral-900 rounded-xl p-2.5 sm:p-4 border border-slate-200/60 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-600"></div>
+        <div class="flex items-center gap-1.5 sm:gap-2.5 mb-1.5 sm:mb-2">
+          <div class="relative w-8 h-8 sm:w-10 sm:h-10 shrink-0">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="14" fill="none" stroke-width="3" class="stroke-emerald-100 dark:stroke-emerald-500/10"/>
+              <circle cx="18" cy="18" r="14" fill="none" stroke-width="3" stroke-linecap="round"
+                class="stroke-emerald-500 transition-all duration-700"
+                [style.stroke-dasharray]="88"
+                [style.stroke-dashoffset]="88 - (88 * (spentPercentage > 100 ? 100 : spentPercentage) / 100)"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-[7px] sm:text-[8px] font-bold text-emerald-600 dark:text-emerald-400">{{spentPercentage > 100 ? 100 : spentPercentage | number:'1.0-0'}}%</span>
+          </div>
+          <span class="text-[10px] sm:text-xs text-slate-500 dark:text-neutral-400 font-medium truncate">Budget</span>
+          <button (click)="isEditingBudget ? saveBudget() : isEditingBudget=true" class="ml-auto w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer"
+            [ngClass]="isEditingBudget ? 'text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-500/10' : 'text-slate-300 dark:text-neutral-600 hover:text-emerald-500 dark:hover:text-emerald-400'">
+            <fa-icon [icon]="isEditingBudget ? ['fas','floppy-disk'] : ['fas','pen']" class="text-[8px] sm:text-[10px]"></fa-icon>
+          </button>
+        </div>
+        <p class="text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100">
+          @if (isEditingBudget) {
+            <input type="number" [(ngModel)]="budget" class="w-full bg-transparent border-b-2 border-emerald-400 dark:border-emerald-500 outline-none text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100 placeholder-emerald-300 dark:placeholder-neutral-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="₹" />
+          } @else {
+            ₹{{budget | number}}
+          }
+        </p>
+      </div>
+
+      <div class="bg-white dark:bg-neutral-900 rounded-xl p-2.5 sm:p-4 border border-slate-200/60 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-rose-400 to-rose-600"></div>
+        <div class="flex items-center gap-1.5 sm:gap-2.5 mb-1.5 sm:mb-2">
+          <div class="relative w-8 h-8 sm:w-10 sm:h-10 shrink-0">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="14" fill="none" stroke-width="3" class="stroke-rose-100 dark:stroke-rose-500/10"/>
+              <circle cx="18" cy="18" r="14" fill="none" stroke-width="3" stroke-linecap="round"
+                class="stroke-rose-500 transition-all duration-700"
+                [style.stroke-dasharray]="88"
+                [style.stroke-dashoffset]="88 - (88 * (spentPercentage > 100 ? 100 : spentPercentage) / 100)"/>
+            </svg>
+            <fa-icon [icon]="['fas','arrow-trend-up']" class="absolute inset-0 flex items-center justify-center text-rose-500 dark:text-rose-400 text-[8px] sm:text-[10px]"></fa-icon>
+          </div>
+          <span class="text-[10px] sm:text-xs text-slate-500 dark:text-neutral-400 font-medium truncate">Spent</span>
+        </div>
+        <p class="text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100">₹{{totalSpent | number}}</p>
+        <span class="text-[9px] sm:text-[11px] text-slate-400 dark:text-neutral-500 mt-0.5 block">{{expenses.length}} txns</span>
+      </div>
+
+      <div class="bg-white dark:bg-neutral-900 rounded-xl p-2.5 sm:p-4 border border-slate-200/60 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-0.5"
+          [ngClass]="remaining >= 0 ? 'bg-gradient-to-r from-sky-400 to-sky-600' : 'bg-gradient-to-r from-red-400 to-red-600'"></div>
+        <div class="flex items-center gap-1.5 sm:gap-2.5 mb-1.5 sm:mb-2">
+          <div class="relative w-8 h-8 sm:w-10 sm:h-10 shrink-0">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="14" fill="none" stroke-width="3"
+                [ngClass]="remaining >= 0 ? 'stroke-sky-100 dark:stroke-sky-500/10' : 'stroke-red-100 dark:stroke-red-500/10'"/>
+              <circle cx="18" cy="18" r="14" fill="none" stroke-width="3" stroke-linecap="round"
+                class="transition-all duration-700"
+                [ngClass]="remaining >= 0 ? 'stroke-sky-500' : 'stroke-red-500'"
+                [style.stroke-dasharray]="88"
+                [style.stroke-dashoffset]="88 - (88 * (remaining >= 0 && budget > 0 ? (remaining / budget * 100 > 100 ? 100 : remaining / budget * 100) : 0) / 100)"/>
+            </svg>
+            <fa-icon [icon]="['fas','coins']" class="absolute inset-0 flex items-center justify-center text-[8px] sm:text-[10px]"
+              [ngClass]="remaining >= 0 ? 'text-sky-500 dark:text-sky-400' : 'text-red-500 dark:text-red-400'"></fa-icon>
+          </div>
+          <span class="text-[10px] sm:text-xs font-medium truncate" [ngClass]="remaining >= 0 ? 'text-slate-500 dark:text-neutral-400' : 'text-red-500 dark:text-red-400'">Left</span>
+        </div>
+        <p class="text-sm sm:text-xl font-bold" [ngClass]="remaining >= 0 ? 'text-slate-800 dark:text-neutral-100' : 'text-red-700 dark:text-neutral-100'">
+          ₹{{remaining >= 0 ? (remaining | number) : 0}}
+        </p>
+        @if (remaining < 0) {
+          <span class="text-[9px] sm:text-[11px] text-red-500 dark:text-red-400 mt-0.5 block font-medium truncate">
+            <fa-icon [icon]="['fas','circle-exclamation']" class="mr-0.5"></fa-icon>
+            -₹{{(totalSpent - budget) | number}}
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-neutral-900 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 border border-slate-200/60 dark:border-neutral-800 shadow-sm">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-[10px] sm:text-[11px] text-slate-400 dark:text-neutral-500">Budget Used</span>
+        <span class="text-[10px] sm:text-[11px] font-semibold"
+          [ngClass]="{
+            'text-emerald-600 dark:text-emerald-400': spentPercentage < 75,
+            'text-amber-500 dark:text-amber-400': spentPercentage >= 75 && spentPercentage < 100,
+            'text-red-500 dark:text-red-400': spentPercentage >= 100
+          }">
+          {{spentPercentage > 100 ? 100 : spentPercentage | number:'1.0-0'}}%
+        </span>
+      </div>
+      <div class="progress-track w-full h-1.5 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+        <div class="progress-bar h-full rounded-full transition-all duration-500 ease-out"
+          [style.width.%]="spentPercentage > 100 ? 100 : spentPercentage"
+          [ngClass]="{
+            'bar-green': spentPercentage < 75,
+            'bar-amber': spentPercentage >= 75 && spentPercentage < 100,
+            'bar-red': spentPercentage >= 100
+          }">
+        </div>
+      </div>
+
+      @if (spentPercentage >= 75 && spentPercentage < 100) {
+        <p class="mt-1.5 text-[10px] sm:text-xs text-amber-600 dark:text-amber-400">
+          <fa-icon [icon]="['fas','triangle-exclamation']" class="mr-0.5"></fa-icon>
+          {{spentPercentage | number:'1.0-0'}}% used — slow down!
+        </p>
+      }
+
+      @if (spentPercentage >= 100) {
+        <p class="mt-1.5 text-[10px] sm:text-xs text-red-600 dark:text-red-400 font-medium">
+          <fa-icon [icon]="['fas','circle-exclamation']" class="mr-0.5"></fa-icon>
+          Overspent by ₹{{(totalSpent - budget) | number}}
+        </p>
+      }
+    </div>
+  </div>
+
+  <div class="flex items-center gap-1 mb-6 border-b border-slate-200 dark:border-neutral-800 overflow-x-auto scrollbar-hide">
+    <button (click)="activeTab = 'expenses'" class="tab-btn px-3 sm:px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+      [ngClass]="activeTab === 'expenses' ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 bg-white dark:bg-neutral-900' : 'text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300'">
+      <fa-icon [icon]="['fas','receipt']" class="text-xs"></fa-icon> Expenses
+    </button>
+    <button (click)="activeTab = 'analytics'" class="tab-btn px-3 sm:px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+      [ngClass]="activeTab === 'analytics' ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 bg-white dark:bg-neutral-900' : 'text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300'">
+      <fa-icon [icon]="['fas','chart-pie']" class="text-xs"></fa-icon> Analytics
+    </button>
+    <button (click)="activeTab = 'chat'" class="tab-btn px-3 sm:px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+      [ngClass]="activeTab === 'chat' ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 bg-white dark:bg-neutral-900' : 'text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300'">
+      <fa-icon [icon]="['fas','robot']" class="text-xs"></fa-icon> AI Chat
+    </button>
+  </div>
+
+  @if (success) {
+    <div class="mb-4 px-4 py-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-2">
+      <fa-icon [icon]="['fas','circle-check']" class="text-xs"></fa-icon>
+      {{success}}
+    </div>
+  }
+  @if (error) {
+    <div class="mb-4 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+      <fa-icon [icon]="['fas','circle-exclamation']" class="text-xs"></fa-icon>
+      {{error}}
+    </div>
+  }
+
+  @if (activeTab === 'expenses') {
+  <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-slate-200/60 dark:border-neutral-800 overflow-hidden">
+    <div class="px-4 sm:px-5 py-4 border-b border-slate-100 dark:border-neutral-800 flex items-center justify-between">
+      <h2 class="font-semibold text-slate-700 dark:text-neutral-200 flex items-center gap-2">
+        <fa-icon [icon]="['fas','receipt']" class="text-xs text-emerald-500"></fa-icon>
+        All Expenses
+      </h2>
+      <span class="text-[10px] sm:text-xs bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 px-2.5 py-1 rounded-full font-medium">{{filteredExpenses.length}} transactions</span>
+    </div>
+    <div class="px-4 sm:px-5 py-3 border-b border-slate-100 dark:border-neutral-800 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+      <button (click)="selectedFilter = 'All'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+        [ngClass]="selectedFilter === 'All' ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-neutral-700'">All</button>
+      @for (cat of activeCategories; track cat) {
+        <button (click)="selectedFilter = cat" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+          [ngClass]="selectedFilter === cat ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-neutral-700'">{{cat}}</button>
+      }
+    </div>
+    <div class="divide-y divide-slate-100 dark:divide-neutral-800">
+      @if (filteredExpenses.length === 0) {
+        <div class="px-4 sm:px-5 py-12 flex flex-col items-center justify-center">
+          <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-neutral-800 flex items-center justify-center mb-3">
+            <fa-icon [icon]="['fas','receipt']" class="text-2xl text-slate-300 dark:text-neutral-600"></fa-icon>
+          </div>
+          <p class="text-sm font-medium text-slate-400 dark:text-neutral-500">No expenses yet</p>
+          <p class="text-xs text-slate-300 dark:text-neutral-600 mt-1">Click "Add Expense" to get started</p>
+        </div>
+      } @else {
+      @for (exp of filteredExpenses; track $index) {
+        <div class="flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-all group">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              [ngClass]="exp.category === 'Food' ? 'bg-orange-100 dark:bg-orange-500/10' : exp.category === 'Shopping' ? 'bg-violet-100 dark:bg-violet-500/10' : exp.category === 'Vacation' ? 'bg-cyan-100 dark:bg-cyan-500/10' : exp.category === 'Health' ? 'bg-pink-100 dark:bg-pink-500/10' : exp.category === 'Insurance' ? 'bg-slate-100 dark:bg-slate-500/10' : exp.category === 'Transportation' ? 'bg-blue-100 dark:bg-blue-500/10' : exp.category === 'Entertainment' ? 'bg-purple-100 dark:bg-purple-500/10' : exp.category === 'Bills' ? 'bg-amber-100 dark:bg-amber-500/10' : exp.category === 'Education' ? 'bg-teal-100 dark:bg-teal-500/10' : exp.category === 'Investment' ? 'bg-emerald-100 dark:bg-emerald-500/10' : 'bg-slate-100 dark:bg-neutral-800'">
+              <fa-icon [icon]="['fas', exp.category === 'Food' ? 'utensils' : exp.category === 'Shopping' ? 'cart-shopping' : exp.category === 'Vacation' ? 'plane' : exp.category === 'Health' ? 'heart-pulse' : exp.category === 'Insurance' ? 'shield-halved' : exp.category === 'Transportation' ? 'car' : exp.category === 'Entertainment' ? 'film' : exp.category === 'Bills' ? 'file-invoice' : exp.category === 'Education' ? 'graduation-cap' : exp.category === 'Investment' ? 'chart-line' : exp.category === 'Others' ? 'ellipsis' : 'file-invoice']"
+                [ngClass]="exp.category === 'Food' ? 'text-orange-500' : exp.category === 'Shopping' ? 'text-violet-500' : exp.category === 'Vacation' ? 'text-cyan-500' : exp.category === 'Health' ? 'text-pink-500' : exp.category === 'Insurance' ? 'text-slate-500' : exp.category === 'Transportation' ? 'text-blue-500' : exp.category === 'Entertainment' ? 'text-purple-500' : exp.category === 'Bills' ? 'text-amber-500' : exp.category === 'Education' ? 'text-teal-500' : exp.category === 'Investment' ? 'text-emerald-500' : 'text-slate-400'"
+                class="text-sm"></fa-icon>
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-slate-700 dark:text-neutral-200">{{exp.category}}</p>
+              @if (exp.description) {
+                <p class="text-xs text-slate-400 dark:text-neutral-500 truncate max-w-[140px] sm:max-w-[250px]">{{exp.description}}</p>
+              }
+              <p class="text-[10px] text-slate-300 dark:text-neutral-600">{{exp.date | date:'MMM d, y'}}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2.5 sm:gap-4">
+            <span class="text-sm font-bold text-slate-800 dark:text-neutral-100">₹{{exp.amount | number}}</span>
+            <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+              <button class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer" (click)="editExpForm(exp)">
+                <fa-icon [icon]="['fas','pen']" class="text-xs"></fa-icon>
+              </button>
+              <button class="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-500 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors cursor-pointer" (click)="deleteExp(exp)">
+                <fa-icon [icon]="['fas','trash']" class="text-xs"></fa-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+      }
+    </div>
+  </div>
+  }
+
+  @if (activeTab === 'analytics') {
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mb-4 sm:mb-5">
+    <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 dark:border-neutral-800 p-5 sm:p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-semibold text-slate-800 dark:text-neutral-100 flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+            <fa-icon [icon]="['fas','chart-pie']" class="text-[10px] text-emerald-500"></fa-icon>
+          </div>
+          Spending by Category
+        </h3>
+        <span class="text-[10px] bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 px-2 py-0.5 rounded-full">{{expenses.length}} items</span>
+      </div>
+      @if (expenses.length > 0) {
+        <div class="hidden md:flex items-center justify-between gap-3">
+          <div class="flex-1 min-w-0 space-y-1">
+            @for (item of breakdownLeft; track item.category) {
+              <div class="flex items-center justify-end gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.backgroundColor]="item.color"></span>
+                <span class="text-xs text-slate-600 dark:text-neutral-300 truncate">{{item.category}}</span>
+                <span class="text-xs font-semibold text-slate-800 dark:text-neutral-100 whitespace-nowrap">₹{{item.amount | number}}</span>
+                <span class="text-[10px] text-slate-400 dark:text-neutral-500 whitespace-nowrap">{{item.percent}}%</span>
+              </div>
+            }
+          </div>
+          <div class="relative h-52 w-52 lg:h-64 lg:w-64 shrink-0">
+            <canvas baseChart
+              [type]="'doughnut'"
+              [data]="doughnutData"
+              [options]="{ responsive: true, maintainAspectRatio: false, animation: { animateRotate: true, duration: 800 }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13, family: 'Inter' }, bodyFont: { size: 12, family: 'Inter' }, padding: 12, cornerRadius: 8, displayColors: true, boxPadding: 4 } }, cutout: '68%' }">
+            </canvas>
+          </div>
+          <div class="flex-1 min-w-0 space-y-1">
+            @for (item of breakdownRight; track item.category) {
+              <div class="flex items-center gap-2 py-1 px-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.backgroundColor]="item.color"></span>
+                <span class="text-xs text-slate-600 dark:text-neutral-300 truncate">{{item.category}}</span>
+                <span class="text-xs font-semibold text-slate-800 dark:text-neutral-100 whitespace-nowrap">₹{{item.amount | number}}</span>
+                <span class="text-[10px] text-slate-400 dark:text-neutral-500 whitespace-nowrap">{{item.percent}}%</span>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="md:hidden">
+          <div class="flex justify-center mb-4">
+            <div class="relative h-44 w-44">
+              <canvas baseChart
+                [type]="'doughnut'"
+                [data]="doughnutData"
+                [options]="{ responsive: true, maintainAspectRatio: false, animation: { animateRotate: true, duration: 800 }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13, family: 'Inter' }, bodyFont: { size: 12, family: 'Inter' }, padding: 12, cornerRadius: 8, displayColors: true, boxPadding: 4 } }, cutout: '68%' }">
+              </canvas>
+            </div>
+          </div>
+          <div class="space-y-0.5">
+            @for (item of categoryBreakdown; track item.category) {
+              <div class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.backgroundColor]="item.color"></span>
+                  <span class="text-xs text-slate-600 dark:text-neutral-300 truncate">{{item.category}}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-xs font-semibold text-slate-800 dark:text-neutral-100">₹{{item.amount | number}}</span>
+                  <span class="text-[10px] text-slate-400 dark:text-neutral-500 w-6 text-right">{{item.percent}}%</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="h-52 sm:h-64 flex items-center justify-center">
+          <div class="text-center">
+            <fa-icon [icon]="['fas','chart-pie']" class="text-4xl text-slate-200 dark:text-neutral-700 mb-2"></fa-icon>
+            <p class="text-sm text-slate-400 dark:text-neutral-500">Add expenses to see chart</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 dark:border-neutral-800 p-5 sm:p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-semibold text-slate-800 dark:text-neutral-100 flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+            <fa-icon [icon]="['fas','arrow-trend-up']" class="text-[10px] text-emerald-500"></fa-icon>
+          </div>
+          Daily Spending
+        </h3>
+      </div>
+      @if (expenses.length > 0) {
+        <div class="relative h-56 sm:h-72 w-full">
+          <canvas baseChart
+            [type]="'bar'"
+            [data]="barData"
+            [options]="{ responsive: true, maintainAspectRatio: false, animation: { duration: 800 }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13, family: 'Inter' }, bodyFont: { size: 12, family: 'Inter' }, padding: 12, cornerRadius: 8 } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 11, family: 'Inter' } } }, y: { grid: { color: 'rgba(148,163,184,0.08)'  }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 11, family: 'Inter' }, padding: 8 } } } }">
+          </canvas>
+        </div>
+      } @else {
+        <div class="h-52 sm:h-64 flex items-center justify-center">
+          <div class="text-center">
+            <fa-icon [icon]="['fas','arrow-trend-up']" class="text-4xl text-slate-200 dark:text-neutral-700 mb-2"></fa-icon>
+            <p class="text-sm text-slate-400 dark:text-neutral-500">Add expenses to see chart</p>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 dark:border-neutral-800 p-5 sm:p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-semibold text-slate-800 dark:text-neutral-100 flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas','chart-line']" class="text-[10px] text-emerald-500"></fa-icon>
+        </div>
+        Monthly Spending Trend
+      </h3>
+    </div>
+    @if (expenses.length > 0) {
+      <div class="relative h-56 sm:h-72 w-full">
+        <canvas baseChart
+          [type]="'line'"
+          [data]="monthlyData"
+          [options]="{ responsive: true, maintainAspectRatio: false, animation: { duration: 800 }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13, family: 'Inter' }, bodyFont: { size: 12, family: 'Inter' }, padding: 12, cornerRadius: 8 } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 11, family: 'Inter' } } }, y: { grid: { color: 'rgba(148,163,184,0.08)' }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 11, family: 'Inter' }, padding: 8 } } } }">
+        </canvas>
+      </div>
+    } @else {
+      <div class="h-52 sm:h-64 flex items-center justify-center">
+        <div class="text-center">
+          <fa-icon [icon]="['fas','chart-line']" class="text-4xl text-slate-200 dark:text-neutral-700 mb-2"></fa-icon>
+          <p class="text-sm text-slate-400 dark:text-neutral-500">Add expenses to see trend</p>
+        </div>
+      </div>
+    }
+  </div>
+  }
+
+  @if (activeTab === 'chat') {
+  <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-slate-200/60 dark:border-neutral-800 overflow-hidden flex flex-col" style="height: calc(100vh - 250px); min-height: 400px;">
+    <div class="px-4 sm:px-5 py-4 border-b border-slate-100 dark:border-neutral-800 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+        <fa-icon [icon]="['fas','robot']" class="text-emerald-500 dark:text-emerald-400"></fa-icon>
+      </div>
+      <div>
+        <h3 class="font-semibold text-slate-700 dark:text-neutral-200 text-sm">AI Finance Assistant</h3>
+        <p class="text-xs text-slate-400 dark:text-neutral-500">Powered by Gemini</p>
+      </div>
+    </div>
+    <div class="flex-1 p-4 sm:p-5 overflow-y-auto bg-slate-50 dark:bg-neutral-950">
+      <div class="flex gap-3 mb-4">
+        <div class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+          <fa-icon [icon]="['fas','robot']" class="text-emerald-500 dark:text-emerald-400 text-xs"></fa-icon>
+        </div>
+        <div class="bg-white dark:bg-neutral-800/60 rounded-xl rounded-tl-none px-4 py-2.5 shadow-sm border border-slate-100 dark:border-neutral-700/50 max-w-[85%] sm:max-w-md">
+          <p class="text-sm text-slate-600 dark:text-neutral-300">Hey! I'm your AI finance assistant. Ask me anything about your expenses — like "How much did I spend on food?" or "Give me saving tips."</p>
+        </div>
+      </div>
+      <div class="flex gap-3 mb-4 justify-end">
+        <div class="bg-emerald-500 rounded-xl rounded-tr-none px-4 py-2.5 max-w-[85%] sm:max-w-md">
+          <p class="text-sm text-white">What's my biggest expense this month?</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <div class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+          <fa-icon [icon]="['fas','robot']" class="text-emerald-500 dark:text-emerald-400 text-xs"></fa-icon>
+        </div>
+        <div class="bg-white dark:bg-neutral-800/60 rounded-xl rounded-tl-none px-4 py-2.5 shadow-sm border border-slate-100 dark:border-neutral-700/50 max-w-[85%] sm:max-w-md">
+          <p class="text-sm text-slate-600 dark:text-neutral-300">Your biggest expense this month is <strong>Bills</strong> at <strong>₹5,000</strong>. It makes up 40% of your total spending.</p>
+        </div>
+      </div>
+    </div>
+    <div class="px-3 sm:px-4 py-3 border-t border-slate-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+      <div class="flex items-center gap-2">
+        <input type="text" placeholder="Ask about your expenses..." class="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-sm text-slate-700 dark:text-neutral-200 outline-none focus:border-emerald-400 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-500/20 transition-all placeholder-slate-400 dark:placeholder-neutral-500" />
+        <button class="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0">
+          <fa-icon [icon]="['fas','arrow-trend-up']" class="text-sm"></fa-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+</div>
