@@ -10,9 +10,17 @@ router.post('/aichat', authMiddleware, async (req, res) => {
     const { message } = req.body;
     const userExpense = await expense.find({ userId: req.user.userId });
 
-    const prompt = `You are a smart finance assistant named ExpBot. 
-    Here is the user's expense data: ${JSON.stringify(userExpense)}.
-    User question: ${message}. Provide a helpful answer.`;
+    const prompt = `You are a smart finance assistant named ExpBot.
+Here is the user's expense data: ${JSON.stringify(userExpense)}.
+User question: ${message}.
+
+Rules for your response:
+- Keep it concise and clear
+- Use bullet points (•) for lists
+- Use line breaks to separate sections
+- Use bold markers like **text** for emphasis
+- Do not use markdown headers (#)
+- Provide a helpful, well-structured answer`;
 
     const response = await fetch(OLLAMA_API_URL, {
       method: 'POST',

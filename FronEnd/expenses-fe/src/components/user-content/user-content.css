@@ -85,3 +85,51 @@
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
+
+/* Jumping balls loader */
+.animate-bounce-dot {
+  animation: bounceDot 0.6s infinite alternate;
+}
+
+@keyframes bounceDot {
+  0% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* Bot reply formatting */
+.bot-reply ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 6px 0;
+}
+
+.bot-reply li {
+  position: relative;
+  padding-left: 16px;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.bot-reply li::before {
+  content: '\2022';
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.bot-reply strong {
+  font-weight: 600;
+  color: #334155;
+}
+
+:host-context(.dark) .bot-reply strong {
+  color: #e2e8f0;
+}

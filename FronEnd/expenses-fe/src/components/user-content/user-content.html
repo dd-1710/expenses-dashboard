@@ -394,13 +394,36 @@
             </div>
           }
           <div class="rounded-xl px-4 py-2.5 shadow-sm max-w-[85%] sm:max-w-md"
-            [ngClass]="msg.isUser ? 'bg-emerald-500 text-white rounded-tr-none' : 'bg-white dark:bg-neutral-800/60 border border-slate-100 dark:border-neutral-700/50 rounded-tl-none'">
-            <p class="text-sm" [ngClass]="msg.isUser ? 'text-white' : 'text-slate-600 dark:text-neutral-300'">{{msg.text}}</p>
+            [ngClass]="msg.isUser ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white dark:bg-neutral-800/60 border border-slate-100 dark:border-neutral-700/50 rounded-tl-none'">
+            @if (msg.isUser) {
+              <p class="text-sm text-white">{{msg.text}}</p>
+            } @else {
+              <div class="text-sm text-slate-600 dark:text-neutral-300 bot-reply" [innerHTML]="formatBotReply(msg.text)"></div>
+            }
           </div>
+          @if (msg.isUser) {
+            <div class="w-7 h-7 rounded-full bg-slate-800 dark:bg-slate-700 flex items-center justify-center shrink-0">
+              <fa-icon [icon]="['fas','user']" class="text-white text-xs"></fa-icon>
+            </div>
+          }
         </div>
       }
 
-      
+      @if (isLoading) {
+      <div class="flex gap-3 mb-4">
+        <div class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+          <fa-icon [icon]="['fas','robot']" class="text-emerald-500 dark:text-emerald-400 text-xs"></fa-icon>
+        </div>
+        <div class="bg-white dark:bg-neutral-800/60 rounded-xl rounded-tl-none px-4 py-3 shadow-sm border border-slate-100 dark:border-neutral-700/50">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-bounce-dot" style="animation-delay: 0ms;"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-bounce-dot" style="animation-delay: 150ms;"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-bounce-dot" style="animation-delay: 300ms;"></span>
+          </div>
+        </div>
+      </div>
+      }
+
     </div>
     <div class="px-3 sm:px-4 py-3 border-t border-slate-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
       <div class="flex items-center gap-2">
