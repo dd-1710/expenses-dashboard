@@ -374,12 +374,37 @@
           <p class="text-sm text-slate-600 dark:text-neutral-300">Hey! I'm your AI finance assistant. Ask me anything about your expenses — like "How much did I spend on food?" or "Give me saving tips."</p>
         </div>
       </div>
-      
+
+      @if (messages.length === 0) {
+      <div class="flex flex-wrap gap-2 mb-4 ml-10">
+        <button (click)="useAIChat('What can you do?')" class="px-4 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-sm text-slate-600 dark:text-neutral-300 hover:border-emerald-400 dark:hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer shadow-sm">
+          🤖 What can you do?
+        </button>
+        <button (click)="useAIChat('How can you help me?')" class="px-4 py-2 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-sm text-slate-600 dark:text-neutral-300 hover:border-emerald-400 dark:hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer shadow-sm">
+          💡 How can you help me?
+        </button>
+      </div>
+      }
+
+      @for (msg of messages; track $index) {
+        <div class="flex gap-3 mb-4" [ngClass]="msg.isUser ? 'justify-end' : ''">
+          @if (!msg.isUser) {
+            <div class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <fa-icon [icon]="['fas','robot']" class="text-emerald-500 dark:text-emerald-400 text-xs"></fa-icon>
+            </div>
+          }
+          <div class="rounded-xl px-4 py-2.5 shadow-sm max-w-[85%] sm:max-w-md"
+            [ngClass]="msg.isUser ? 'bg-emerald-500 text-white rounded-tr-none' : 'bg-white dark:bg-neutral-800/60 border border-slate-100 dark:border-neutral-700/50 rounded-tl-none'">
+            <p class="text-sm" [ngClass]="msg.isUser ? 'text-white' : 'text-slate-600 dark:text-neutral-300'">{{msg.text}}</p>
+          </div>
+        </div>
+      }
+
       
     </div>
     <div class="px-3 sm:px-4 py-3 border-t border-slate-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
       <div class="flex items-center gap-2">
-        <input type="text" placeholder="Ask about your expenses..." class="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-sm text-slate-700 dark:text-neutral-200 outline-none focus:border-emerald-400 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-500/20 transition-all placeholder-slate-400 dark:placeholder-neutral-500" [(ngModel)]="userText" />
+        <input type="text" placeholder="Ask about your expenses..." class="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-sm text-slate-700 dark:text-neutral-200 outline-none focus:border-emerald-400 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-500/20 transition-all placeholder-slate-400 dark:placeholder-neutral-500" [(ngModel)]="userText" (keydown.enter)="useAIChat(userText)" />
         <button class="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0" (click)="useAIChat(userText)">
           <fa-icon [icon]="['fas','paper-plane']" class="text-sm"></fa-icon>
         </button>

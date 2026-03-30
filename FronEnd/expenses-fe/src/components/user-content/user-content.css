@@ -60,3 +60,28 @@
 .divide-y > *:nth-child(8)  { animation-delay: 0.24s; }
 .divide-y > *:nth-child(9)  { animation-delay: 0.27s; }
 .divide-y > *:nth-child(10) { animation-delay: 0.30s; }
+
+/* Stylish scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
