@@ -5,6 +5,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { FaIconComponent, FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { faIndianRupeeSign, faTag, faPen, faCalendar, faXmark, faPlus, faChevronDown, faUtensils, faCartShopping, faPlane, faHeartPulse, faShieldHalved, faCar, faFilm, faFileInvoice, faGraduationCap, faEllipsis, faCheck, faStickyNote, faArrowsRotate, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { expensesService } from '../../services/expensesService';
+import { Expense } from '../../interfaces/addExpense.model';
 @Component({
   selector: 'app-add-expense',
   imports: [CommonModule, ReactiveFormsModule, FaIconComponent],
@@ -15,7 +16,7 @@ import { expensesService } from '../../services/expensesService';
 export class AddExpense{
    @Output() close = new EventEmitter<void>();
    @Output() fetchExpData = new EventEmitter<void>();
-   @Input() editedData!:any;
+   @Input() editedData!:Expense;
   constructor(private fb: FormBuilder, library: FaIconLibrary,private expenseSer:expensesService) {
     library.addIcons(faIndianRupeeSign, faTag, faPen, faCalendar, faXmark, faPlus, faChevronDown, faUtensils, faCartShopping, faPlane, faHeartPulse, faShieldHalved, faCar, faFilm, faFileInvoice, faGraduationCap, faEllipsis, faCheck,faStickyNote,faArrowsRotate,faChartLine);
     this.buildForm();

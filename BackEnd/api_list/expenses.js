@@ -33,6 +33,13 @@ router.get('/get-all-expenses', authMiddleware, async (req, res) => {
 router.delete('/delete-expense/:id',authMiddleware,async(req,res)=>{
   try{
     const id = req.params.id;
+    const fetchUserId = await expense.findById(id);
+    if(!fetchUserId){
+     return res.status(404).json({message:"No expense available to delete"});
+    }
+    if(fetchUserId.userId.toString() !== req.user.userId){
+      return res.status(403).json({message:"You don't have access to delete this expense"})
+    }
     await expense.findByIdAndDelete(id);
     return res.status(200).json({message:"Expense Delete Successfully"});
 
@@ -46,6 +53,13 @@ router.put('/update-expense/:id',authMiddleware,async(req,res)=>{
     try{
         const {amount,category,description,date} = req.body;
         const id = req.params.id;
+        const fetchUserId = await expense.findById(id);
+        if(!fetchUserId){
+            return res.status(404).json({message:'No expense available to update.'})
+        }
+        if(fetchUserId.userId.toString() !== req.user.userId){
+            return res.status(403).json({message:"You don't have access to update this expense."})
+        }
         const updateExpense = await expense.findByIdAndUpdate(id,{amount,category,description,date})
         return res.status(200).json({updateExpense,message:'Updated Successfully'});
     }

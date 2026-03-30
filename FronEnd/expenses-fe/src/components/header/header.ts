@@ -5,7 +5,7 @@ import { AddExpense } from "../add-expense/add-expense";
 import { UserContent } from '../user-content/user-content';
 import { Router } from '@angular/router';
 import { expensesService } from '../../services/expensesService';
-import { addExpense } from '../../interfaces/addExpense.model';
+import { Expense } from '../../interfaces/addExpense.model';
 @Component({
   selector: 'app-header',
   imports: [FaIconComponent, AddExpense, UserContent],
@@ -22,7 +22,7 @@ export class Header {
   isDarkMode:boolean = false;
   isMenuOpen:boolean = false;
   showExpense = signal(false);
-  expenses:addExpense[]=[];
+  expenses:Expense[]=[];
 
   toggleDarkMode() {
     this.isDarkMode = !this.isDarkMode;

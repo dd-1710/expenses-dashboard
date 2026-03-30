@@ -1,9 +1,9 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { expensesService } from '../../services/expensesService';
-import { addExpense } from '../../interfaces/addExpense.model';
+import { Expense } from '../../interfaces/addExpense.model';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from '../add-expense/add-expense';
@@ -11,6 +11,11 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ArcElement, BarController, BarElement, CategoryScale, Chart, ChartData, DoughnutController, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js';
 
 Chart.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, BarController, DoughnutController, LineController, LineElement, PointElement, Filler);
+
+export interface ChatMsg{
+  text: string,
+  isUser: boolean
+}
 @Component({
   selector: 'app-user-content',
   imports: [FaIconComponent, CommonModule, FormsModule, AddExpense, BaseChartDirective],
@@ -19,11 +24,11 @@ Chart.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearSca
   standalone:true,
 })
 export class UserContent {
-  selectExp: any;
+  selectExp!: Expense;
   greet:string = '';
   today = new Date();
   userName = sessionStorage.getItem('userName')?.toUpperCase();
-  expenses: addExpense[] = [];
+  expenses: Expense[] = [];
   budget: number = 0;
   totalSpent: number = 0;
   remaining: number = 0;
@@ -33,8 +38,8 @@ export class UserContent {
   activeTab: string = 'expenses';
   isEditingForm = false;
   selectedFilter: string = 'All';
-  success: any;
-  error: any;
+  success!: string;
+  error!: string;
   doughnutData: ChartData<'doughnut'> = {labels:[],datasets:[]};
   barData: ChartData<'bar'> = {labels:[],datasets:[]};
   monthlyData: ChartData<'line'> = {labels:[],datasets:[]};
@@ -51,8 +56,8 @@ export class UserContent {
   'Investment': '#34D399',
   'Others': '#C9CBCF'
 };
-   userText: any = '';
-   messages:any = [];
+   userText: string = '';
+   messages:ChatMsg[] = []
 
   constructor(private expenseSer:expensesService, private sanitizer:DomSanitizer, library:FaIconLibrary){
    library.addIcons(faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser)
@@ -117,12 +122,12 @@ export class UserContent {
     })
   }
 
- editExpForm(exp:any){
+ editExpForm(exp:Expense){
   this.selectExp = exp;
   this.isEditingForm = true;
  }
 
- deleteExp(exp:any){
+ deleteExp(exp:Expense){
   this.expenseSer.deleteExpense(exp._id).subscribe({
     next: res=>{
       this.success = res.message;
@@ -148,7 +153,7 @@ export class UserContent {
     this.isAccordionOpen = !this.isAccordionOpen;
   }
 
-  get filteredExpenses(): addExpense[] {
+  get filteredExpenses(): Expense[] {
     if (this.selectedFilter === 'All') return this.expenses;
     return this.expenses.filter(exp => exp.category === this.selectedFilter);
   }
