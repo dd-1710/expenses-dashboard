@@ -19,4 +19,17 @@ describe('AddExpense', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('is dropdown open',()=>{
+    expect(component.dropdownOpen).toBeFalsy();
+  })
+
+  it('total categories',()=>{
+    expect(component.categories.length).toBe(11)
+  })
+
+  it('future date is rejected',()=>{
+    component.addExpenseForm.get('date')?.setValue('2030-01-01');
+    expect(component.addExpenseForm.get('date')?.errors?.['futureDate']).toBeTruthy();
+  })
 });

@@ -19,4 +19,18 @@ describe('Login', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('has username password',()=>{
+    expect(component.loginForm.contains('userName')).toBeTruthy();
+    expect(component.loginForm.contains('password')).toBeTruthy()
+  })
+
+  it('is valid form',()=>{
+    expect(component.loginForm.valid).toBeFalsy()
+  })
+
+  it('both fields filled',()=>{
+    component.loginForm.setValue({userName:'testuser',password:'test@1234'})
+    expect(component.loginForm.valid).toBeTruthy();
+  })
 });
