@@ -25,9 +25,11 @@ app.use('/api',userAPI);
 app.use('/api',addexpenseAPI);
 app.use('/api',chatAPI);
 
-mgdb.connect(process.env.MONGO_URI).then(()=>{console.log("MONGO Connected")}).catch((err)=>{console.log("There is issue while connecting DB",err)})
-
-
-app.listen(PORT,()=>{
+if(process.env.NODE_ENV !== 'test'){
+ mgdb.connect(process.env.MONGO_URI).then(()=>{console.log("MONGO Connected")}).catch((err)=>{console.log("There is issue while connecting DB",err)})
+ app.listen(PORT,()=>{
     console.log(`APP Started On ${PORT}`)
-})
+ })
+}
+
+module.exports = app;
