@@ -113,6 +113,7 @@ export class UserContent {
     this.expenseSer.getAllExpenses().subscribe({
       next: res=>{
         this.expenses = res;
+        this.expenseSer.updateExpenseCount(res.length);
         console.log(this.expenses)
         this.totalCalculation()
       },

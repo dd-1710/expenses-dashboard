@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faIndianRupeeSign,faPlus,faCircleHalfStroke,faMoon, faSignOut, faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from "../add-expense/add-expense";
@@ -13,7 +13,7 @@ import { Expense } from '../../interfaces/addExpense.model';
   styleUrl: './header.css',
   standalone: true
 })
-export class Header {
+export class Header implements OnInit {
   constructor(library: FaIconLibrary, private router: Router,private expenseSer:expensesService){
     library.addIcons(faIndianRupeeSign,faPlus,faCircleHalfStroke,faMoon, faSignOut, faBars, faXmark)
 
@@ -23,6 +23,13 @@ export class Header {
   isMenuOpen:boolean = false;
   showExpense = signal(false);
   expenses:Expense[]=[];
+  expensesCount:number = 0;
+
+  ngOnInit(){
+   this.expenseSer.expenseCount$.subscribe((count)=>{
+    this.expensesCount = count
+   })
+  }
 
   toggleDarkMode() {
     this.isDarkMode = !this.isDarkMode;

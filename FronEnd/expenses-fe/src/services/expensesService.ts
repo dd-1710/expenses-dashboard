@@ -3,6 +3,7 @@ import { Observable } from "rxjs";
 import { HttpClient } from "@angular/common/http";
 import { environment } from "../../environment";
 import { Expense } from "../interfaces/addExpense.model";
+import { BehaviorSubject } from "rxjs";
 @Injectable({
     providedIn: 'root'
 })
@@ -12,6 +13,15 @@ export class expensesService {
     constructor(private http: HttpClient) {
 
     }
+
+    private expenseCount = new BehaviorSubject<number>(0);
+    expenseCount$ = this.expenseCount.asObservable();
+
+
+    updateExpenseCount(count:number){
+        this.expenseCount.next(count)
+    }
+
 
     apiURL = environment.backendURL;
 
