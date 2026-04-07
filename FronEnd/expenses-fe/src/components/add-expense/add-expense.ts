@@ -27,9 +27,7 @@ export class AddExpense{
       console.log(this.editedData)
       this.isEdit = true;
       this.addExpenseForm.patchValue({
-      amount: this.editedData.amount,
-      category: this.editedData.category,
-      description: this.editedData.description,
+      ...this.editedData,
       date: this.editedData.date.split('T')[0]
     })
     }

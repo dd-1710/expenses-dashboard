@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { Observable } from "rxjs";
+import { catchError, Observable, throwError } from "rxjs";
 import { HttpClient } from "@angular/common/http";
 import { environment } from "../../environment";
 import { Expense } from "../interfaces/addExpense.model";
@@ -25,31 +25,35 @@ export class expensesService {
 
     apiURL = environment.backendURL;
 
+    private handleError(err: any): Observable<never> {
+        return throwError(() => err);
+    }
+
     addExpense(expense: Expense): Observable<any> {
-        return this.http.post(`${this.apiURL}/api/add-expense`, expense)
+        return this.http.post(`${this.apiURL}/api/add-expense`, expense).pipe(catchError(err => this.handleError(err)));
     }
 
     getAllExpenses(): Observable<any> {
-        return this.http.get(`${this.apiURL}/api/get-all-expenses`);
+        return this.http.get(`${this.apiURL}/api/get-all-expenses`).pipe(catchError(err => this.handleError(err)));
     }
 
     updateExpense(id: string, expense: Expense): Observable<any> {
-        return this.http.put(`${this.apiURL}/api/update-expense/${id}`, expense);
+        return this.http.put(`${this.apiURL}/api/update-expense/${id}`, expense).pipe(catchError(err => this.handleError(err)));
     }
 
     deleteExpense(id: string): Observable<any> {
-        return this.http.delete(`${this.apiURL}/api/delete-expense/${id}`);
+        return this.http.delete(`${this.apiURL}/api/delete-expense/${id}`).pipe(catchError(err => this.handleError(err)));
     }
 
     getBudget(): Observable<any> {
-        return this.http.get(`${this.apiURL}/api/get-user-budget`);
+        return this.http.get(`${this.apiURL}/api/get-user-budget`).pipe(catchError(err => this.handleError(err)));
     }
 
     updateBudget(budget: number): Observable<any> {
-        return this.http.put(`${this.apiURL}/api/update-user-budget`, { budget });
+        return this.http.put(`${this.apiURL}/api/update-user-budget`, { budget }).pipe(catchError(err => this.handleError(err)));
     }
 
     aiChat(message: string): Observable<any> {
-        return this.http.post(`${this.apiURL}/api/aichat`,{message});
+        return this.http.post(`${this.apiURL}/api/aichat`,{message}).pipe(catchError(err => this.handleError(err)));
     }
 }

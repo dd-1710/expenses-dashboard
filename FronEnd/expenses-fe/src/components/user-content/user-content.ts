@@ -118,7 +118,7 @@ export class UserContent {
         this.totalCalculation()
       },
       error: err=>{
-        return err.error.message;
+        this.error = err.error?.message || 'Failed to load expenses';
       }
     })
   }
