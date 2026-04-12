@@ -6,3 +6,14 @@ input[type="date"]:focus::-webkit-datetime-edit,
 input[type="date"].ng-dirty::-webkit-datetime-edit {
   color: #334155;
 }
+
+/* Dark theme for date input */
+:root[data-theme="dark"] input[type="date"]::-webkit-datetime-edit,
+.dark input[type="date"]::-webkit-datetime-edit {
+  color: #a1a5b3;
+}
+
+:root[data-theme="dark"] input[type="date"]:focus::-webkit-datetime-edit,
+.dark input[type="date"]:focus::-webkit-datetime-edit {
+  color: #f3f4f6;
+}

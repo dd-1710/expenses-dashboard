@@ -94,6 +94,33 @@ export class AddExpense{
   }
 
   addExpense() {
+    // Check if budget is set before adding expense
+    if(this.addExpenseForm.value.amount && !this.isEdit) {
+      this.expenseSer.getBudget().subscribe({
+        next: (budgetRes) => {
+          if(budgetRes.budget === 0 || budgetRes.budget === undefined) {
+            this.error = '⚠️  Budget not set! Please set your monthly budget before adding expenses.';
+            setTimeout(() => {
+              this.error = '';
+            }, 4000);
+            return;
+          }
+          // Proceed with adding expense
+          this.submitExpense();
+        },
+        error: () => {
+          this.error = '⚠️  Could not verify budget. Please set your budget first.';
+          setTimeout(() => {
+            this.error = '';
+          }, 4000);
+        }
+      });
+    } else {
+      this.submitExpense();
+    }
+  }
+
+  submitExpense() {
     if(this.isEdit){
       this.expenseSer.updateExpense(this.editedData._id,this.addExpenseForm.value).subscribe({
         next: res=>{

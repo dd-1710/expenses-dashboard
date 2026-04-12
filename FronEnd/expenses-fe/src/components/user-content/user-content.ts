@@ -253,16 +253,47 @@ export class UserContent {
 
   useAIChat(userText:string){
     if(!userText.trim())return;
+    
+    // Check if budget is set before processing
+    if(this.budget === 0 || this.budget === undefined) {
+      this.error = '⚠️  Budget not set! Please set your monthly budget before adding expenses via chat.';
+      setTimeout(() => { this.error = '' }, 4000);
+      return;
+    }
+    
     this.messages.push({text:userText,isUser:true});
     this.userText = '';
     this.isLoading = true;
     this.expenseSer.aiChat(userText).subscribe({
       next: res=>{
         this.isLoading = false;
-        this.messages.push({text:res.reply,isUser:false});        
+        this.messages.push({text:res.reply,isUser:false});
+        
+        console.log('🤖 AI Response:', res);
+        
+        // If AI detected and added an expense, refresh the list
+        if(res.expenseAdded && res.expense) {
+          console.log('✅ Expense detected in response:', res.expense);
+          
+          // Add to local array
+          this.expenses.push(res.expense);
+          
+          // Recalculate totals and charts
+          this.totalCalculation();
+          
+          // Show success message
+          this.success = `✓ Expense added: ₹${res.expense.amount} for ${res.expense.category}`;
+          console.log('💾 Total expenses now:', this.expenses.length);
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => { this.success = '' }, 3000);
+        } else {
+          console.log('ℹ️  No expense in response. expenseAdded:', res.expenseAdded);
+        }
       },
       error: err=>{
           this.isLoading = false;
+          console.error('❌ AI Chat Error:', err);
           this.messages.push({text:'Something went wrong. Try again.', isUser: false })
       }
     })

@@ -1,6 +1,7 @@
 {
-  "name": "expenses-fe",
+  "name": "expenses-dashboard-frontend",
   "version": "0.0.0",
+  "description": "Angular frontend for the Expenses Dashboard app with charts, budget analytics, and AI chat.",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
