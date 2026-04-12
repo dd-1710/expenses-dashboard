@@ -12,7 +12,7 @@ export class UserService{
 
     }
 
-    private apiURL = environment.backendURL;
+    private apiURL = environment.apiUrl;
 
     signIn(userName:string,password:string):Observable<any>{
      return this.http.post(`${this.apiURL}/api/signIn`,{userName,password})

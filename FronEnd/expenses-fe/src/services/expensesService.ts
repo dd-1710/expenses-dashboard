@@ -23,7 +23,7 @@ export class expensesService {
     }
 
 
-    apiURL = environment.backendURL;
+    apiURL = environment.apiUrl;
 
     private handleError(err: any): Observable<never> {
         return throwError(() => err);
