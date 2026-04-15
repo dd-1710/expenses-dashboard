@@ -65,4 +65,8 @@ router.put('/update-user-budget',authMiddleware,async(req,res)=>{
       return res.status(500).json({message:"Unable to update the budget",error:err.message})
     }
 })
+
+module.exports = function (req, res) {
+  res.status(200).json({ message: "User API working ✅" });
+};
 module.exports = router;
