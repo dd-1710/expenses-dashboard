@@ -2,9 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const mgdb = require('mongoose');
 require('dotenv').config();
-const userAPI = require('./api_list/user')
-const addexpenseAPI = require('./api_list/expenses');
-const chatAPI = require('./api_list/aichat');
+const userAPI = require('./api/user')
+const addexpenseAPI = require('./api/expenses');
+const chatAPI = require('./api/aichat');
 const helmet = require('helmet');
 const rateLimit1 = require('express-rate-limit')
 
