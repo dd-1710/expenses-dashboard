@@ -9,7 +9,6 @@ import {environment} from '../environments/environment'
 
 export class UserService{
     constructor(private http:HttpClient){
-
     }
 
     private apiURL = environment.apiUrl;
