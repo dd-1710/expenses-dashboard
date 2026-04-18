@@ -1,21 +1,16 @@
 const router = require('express').Router();
 const authMiddleware = require('../middleware/authmiddleware');
-const expense = require('../schemas/expenseSchema');
+const Expense = require('../schemas/expenseSchema');
 const User = require('../schemas/userSchema');
 const Groq = require('groq-sdk');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
-if (!GROQ_API_KEY && process.env.NODE_ENV !== 'test') {
-  console.warn('GROQ_API_KEY not set. AI chat will not work.');
-}
 
 let groq;
 if (GROQ_API_KEY) {
   groq = new Groq({ apiKey: GROQ_API_KEY });
 }
 
-// Model config — easy to swap
 const CHAT_MODEL = 'llama-3.3-70b-versatile';
 const EXTRACTION_MODEL = 'llama-3.3-70b-versatile';
 
@@ -24,180 +19,193 @@ const VALID_CATEGORIES = [
   'Transportation', 'Entertainment', 'Bills', 'Education', 'Investment', 'Others'
 ];
 
-const CATEGORY_KEYWORDS = {
-  'Food': ['food', 'khana', 'eat', 'lunch', 'dinner', 'breakfast', 'snack', 'biryani', 'pizza', 'burger', 'chai', 'coffee'],
-  'Shopping': ['shopping', 'buy', 'bought', 'clothes', 'dress', 'khareedari', 'amazon', 'flipkart', 'shoes'],
-  'Vacation': ['vacation', 'travel', 'trip', 'flight', 'hotel', 'holiday', 'outing'],
-  'Transportation': ['petrol', 'gas', 'fuel', 'car', 'bike', 'taxi', 'auto', 'uber', 'ola', 'metro', 'bus', 'train'],
-  'Entertainment': ['movie', 'cinema', 'game', 'entertainment', 'netflix', 'concert', 'party'],
-  'Health': ['health', 'medicine', 'doctor', 'pharmacy', 'hospital', 'gym', 'medical'],
-  'Insurance': ['insurance', 'policy', 'premium', 'lic'],
-  'Bills': ['bill', 'electricity', 'water', 'rent', 'phone', 'recharge', 'wifi', 'broadband', 'emi'],
-  'Education': ['education', 'school', 'course', 'tuition', 'book', 'udemy', 'college', 'fee'],
-  'Investment': ['investment', 'stock', 'crypto', 'mutual fund', 'sip', 'fd', 'gold']
-};
-
-// Keyword-based fallback extraction (no API call needed)
+// -------- Keyword fallback ----------
 function extractExpenseFromKeywords(userMsg) {
   const amountMatch = userMsg.match(/(\d[\d,]*)/);
   if (!amountMatch) return null;
 
   const amount = parseInt(amountMatch[1].replace(/,/g, ''));
-  if (isNaN(amount) || amount <= 0 || amount > 10000000) return null;
+  if (!amount || amount <= 0 || amount > 10000000) return null;
 
-  let category = 'Others';
-  const text = userMsg.toLowerCase();
-
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(kw => text.includes(kw))) {
-      category = cat;
-      break;
-    }
-  }
-
-  return { amount, category, description: userMsg.substring(0, 100) };
+  return {
+    amount,
+    category: 'Others',
+    description: userMsg.substring(0, 100)
+  };
 }
 
+// -------- Improved intent detection ----------
+function detectIntent(message) {
+  const msg = message.toLowerCase();
+
+  if (msg.includes('help') || msg.includes('what can you do')) {
+    return 'HELP';
+  }
+
+  if (/\d/.test(msg) && (msg.includes('spent') || msg.includes('paid') || msg.includes('bought'))) {
+    return 'EXPENSE';
+  }
+
+  return 'CHAT';
+}
+
+// -------- Safe JSON parse ----------
+function safeJSONParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+// -------- Route ----------
 router.post('/aichat', authMiddleware, async (req, res) => {
   try {
     if (!GROQ_API_KEY) {
       return res.status(503).json({
-        message: 'AI service not configured',
-        reply: 'AI assistant is temporarily unavailable. Please try again later.'
+        reply: 'AI assistant is temporarily unavailable.'
       });
     }
 
     const { message } = req.body;
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+
+    if (!message || typeof message !== 'string') {
       return res.status(400).json({ message: 'Message is required' });
+    }
+
+    const intent = detectIntent(message);
+
+    // -------- HELP ----------
+    if (intent === 'HELP') {
+      return res.json({
+        reply: `I can track expenses from messages.
+
+Examples:
+• "Spent ₹500 on food"
+• "Paid ₹1200 rent"
+• "Bought shoes for ₹2000"
+
+You can even add multiple:
+"Spent ₹500 food and ₹1000 shopping"`
+      });
     }
 
     const userId = req.user.userId;
 
     const user = await User.findById(userId);
-    if (!user || !user.budget || user.budget <= 0) {
+    if (!user || !user.budget) {
       return res.status(403).json({
-        message: 'Budget not set! Please set your monthly budget before using chat.',
-        reply: 'Please set your monthly budget first, then I can help track your expenses!'
+        reply: 'Please set your monthly budget first.'
       });
     }
 
-    const userExpenses = await expense.find({ userId }).sort({ date: -1 }).limit(50);
+    const userExpenses = await Expense.find({ userId }).sort({ date: -1 }).limit(50);
 
     const totalSpent = userExpenses.reduce((sum, e) => sum + e.amount, 0);
     const remaining = user.budget - totalSpent;
-    const categories = [...new Set(userExpenses.map(e => e.category))].join(', ');
 
-    const expenseContext = userExpenses.length > 0
-      ? `Budget: ₹${user.budget}. Spent: ₹${totalSpent}. Remaining: ₹${remaining}. ${userExpenses.length} expenses across: ${categories}.`
-      : `Budget: ₹${user.budget}. No expenses recorded yet.`;
+    const expenseContext = `Budget: ₹${user.budget}, Spent: ₹${totalSpent}, Remaining: ₹${remaining}`;
 
-    // Step 1: Extract expense using JSON mode (single API call with guaranteed JSON)
-    let expenseAdded = false;
-    let expenseData = null;
+    let addedExpenses = [];
 
-    try {
-      const extractionResult = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: `Extract expense info from user messages. Return JSON only.
-If the user mentions spending money, return: {"hasExpense": true, "amount": <number>, "category": "<one of: ${VALID_CATEGORIES.join(', ')}>", "description": "<short description>"}
-If no expense mentioned, return: {"hasExpense": false}
-Today's date is ${new Date().toISOString().split('T')[0]}.`
-          },
-          { role: 'user', content: message }
-        ],
-        model: EXTRACTION_MODEL,
-        max_tokens: 100,
-        temperature: 0,
-        response_format: { type: 'json_object' }
-      });
+    // -------- MULTI EXPENSE EXTRACTION ----------
+    if (intent === 'EXPENSE') {
+      try {
+        const extraction = await groq.chat.completions.create({
+          messages: [
+            {
+              role: 'system',
+              content: `Extract ALL expenses.
 
-      const parsed = JSON.parse(extractionResult.choices[0].message.content);
+Return ONLY JSON:
+{
+  "expenses": [
+    { "amount": number, "category": string, "description": string }
+  ]
+}
 
-      if (parsed.hasExpense === true && parsed.amount && parsed.category) {
-        const amount = parseInt(parsed.amount);
-        if (!isNaN(amount) && amount > 0 && amount <= 10000000 && VALID_CATEGORIES.includes(parsed.category)) {
-          const newExpense = await expense.create({
-            userId,
-            amount,
-            category: parsed.category,
-            description: parsed.description?.substring(0, 200) || '',
-            date: parsed.date || new Date().toISOString()
-          });
-          expenseAdded = true;
-          expenseData = newExpense;
+Rules:
+- Ignore invalid or zero amounts
+- Categories must be from: ${VALID_CATEGORIES.join(', ')}
+- If none → { "expenses": [] }`
+            },
+            { role: 'user', content: message }
+          ],
+          model: EXTRACTION_MODEL,
+          temperature: 0,
+          response_format: { type: 'json_object' }
+        });
+
+        const parsed = safeJSONParse(extraction.choices[0].message.content);
+
+        if (parsed && Array.isArray(parsed.expenses)) {
+          for (const item of parsed.expenses) {
+            const amount = parseInt(item.amount);
+
+            if (!amount || amount <= 0 || amount > 10000000) continue;
+
+            const newExpense = await Expense.create({
+              userId,
+              amount,
+              category: VALID_CATEGORIES.includes(item.category)
+                ? item.category
+                : 'Others',
+              description: item.description || '',
+              date: new Date()
+            });
+
+            addedExpenses.push(newExpense);
+          }
         }
-      }
-    } catch (extractErr) {
-      // Fallback to keyword extraction if AI extraction fails
-      const extracted = extractExpenseFromKeywords(message);
-      if (extracted) {
-        try {
-          const newExpense = await expense.create({
+      } catch (err) {
+        // fallback (single)
+        const fallback = extractExpenseFromKeywords(message);
+
+        if (fallback) {
+          const newExpense = await Expense.create({
             userId,
-            amount: extracted.amount,
-            category: extracted.category,
-            description: extracted.description,
-            date: new Date().toISOString()
+            amount: fallback.amount,
+            category: fallback.category,
+            description: fallback.description,
+            date: new Date()
           });
-          expenseAdded = true;
-          expenseData = newExpense;
-        } catch (dbErr) {
-          // Expense save failed, continue to chat response
+
+          addedExpenses.push(newExpense);
         }
       }
     }
 
-    // Step 2: Generate chat response using system role properly
-    const result = await groq.chat.completions.create({
+    // -------- CHAT RESPONSE ----------
+    const chat = await groq.chat.completions.create({
       messages: [
         {
           role: 'system',
-          content: `You are ExpBot, a concise personal finance assistant for Indian users.
+          content: `You are a concise expense assistant.
 
-USER CONTEXT: ${expenseContext}
-${expenseAdded ? `JUST ADDED: ₹${expenseData.amount} on ${expenseData.category}. Acknowledge this.` : ''}
+${expenseContext}
 
-RULES:
-• All amounts in Indian Rupees (₹)
-• Use bullet points (•) for lists
-• Keep responses under 80 words
-• Be practical and actionable
-• If user mentioned an expense that was saved, confirm: "Got it! Noted ₹X on [category]."
-• Don't repeat the user's message back to them`
+Rules:
+• Max 50 words
+• Use ₹
+• Be direct
+${addedExpenses.length > 0 ? `Confirm total expenses added.` : ''}`
         },
         { role: 'user', content: message }
       ],
       model: CHAT_MODEL,
-      max_tokens: 250,
-      temperature: 0.6
+      temperature: 0.5
     });
 
-    const reply = result.choices[0].message.content;
-
-    const response = {
-      reply,
-      ...(expenseAdded && {
-        expenseAdded: true,
-        expense: {
-          _id: expenseData._id,
-          amount: expenseData.amount,
-          category: expenseData.category,
-          description: expenseData.description,
-          date: expenseData.date
-        }
-      })
-    };
-
-    res.json(response);
+    return res.json({
+      reply: chat.choices[0].message.content,
+      expenseAdded: addedExpenses.length > 0,
+      expenses: addedExpenses
+    });
 
   } catch (err) {
-    console.error('AI Chat Error:', err.message);
+    console.error(err);
     res.status(500).json({
-      message: 'AI Request Failed',
-      reply: 'Sorry, I encountered an issue. Please try again.'
+      reply: 'Something went wrong. Please try again.'
     });
   }
 });
