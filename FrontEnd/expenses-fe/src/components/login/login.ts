@@ -58,6 +58,7 @@ export class Login implements OnInit {
   submit() {
     this.success = '';
     this.error = '';
+    this.loading = true;
     const {userName,password} = this.loginForm.value;
     if (this.isSignUp) {
       this.userService.signUp(userName, password).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -83,12 +84,14 @@ export class Login implements OnInit {
           this.success = '';
           sessionStorage.setItem('token',res.token);
           sessionStorage.setItem('userName',userName);
-          this.router.navigate(['/dashboard'])       
+          this.router.navigate(['/dashboard'])   
+          this.loading = false;    
         },
         error: (err)=>{
           this.error = err.error?.message || "Server is Down";
           setTimeout(() => {
              this.error = '';
+             this.loading = false;
           }, 3000);
         }
       })

@@ -58,12 +58,11 @@
           <span class="text-[10px] sm:text-xs text-slate-500 dark:text-neutral-400 font-medium truncate">Spent</span>
         </div>
         <p class="text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100">₹{{totalSpent | number}}</p>
-        <span class="text-[9px] sm:text-[11px] text-slate-400 dark:text-neutral-500 mt-0.5 block">{{expenses.length}} txns</span>
       </div>
 
       <div class="bg-white dark:bg-neutral-900 rounded-xl p-2.5 sm:p-4 border border-slate-200/60 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-0.5"
-          [ngClass]="remaining >= 0 ? 'bg-gradient-to-r from-sky-400 to-sky-600' : 'bg-gradient-to-r from-red-400 to-red-600'"></div>
+          [ngClass]="remaining >= 0 ? 'bg-linear-to-r from-sky-400 to-sky-600' : 'bg-linear-to-r from-red-400 to-red-600'"></div>
         <div class="flex items-center gap-1.5 sm:gap-2.5 mb-1.5 sm:mb-2">
           <div class="relative w-8 h-8 sm:w-10 sm:h-10 shrink-0">
             <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
