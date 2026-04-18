@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ExpensesService } from '../../services/expensesService';
 import { Expense } from '../../interfaces/addExpense.model';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faHandshake, faWallet, faChevronUp, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from '../add-expense/add-expense';
 import { BaseChartDirective } from 'ng2-charts';
 import { ArcElement, BarController, BarElement, CategoryScale, Chart, ChartData, DoughnutController, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js';
@@ -61,9 +61,14 @@ export class UserContent implements OnInit {
 };
    userText: string = '';
    messages:ChatMsg[] = []
+  page: number = 1;
+  limit: number = 3;
+  totalCount : number = 0;
+  totalPages:number = 0;
+  chartCategoryData: { _id: string, total: number }[] = [];
 
   constructor(private expenseSer:ExpensesService, private sanitizer:DomSanitizer, library:FaIconLibrary){
-   library.addIcons(faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser)
+   library.addIcons(faHandshake, faWallet, faChevronUp,faChevronLeft, faChevronRight, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser)
   }
   ngOnInit(){
    this.userMessage();
@@ -112,17 +117,37 @@ export class UserContent implements OnInit {
   }
 
    fetchAllExpenses(){
-    this.expenseSer.getAllExpenses().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.expenseSer.getAllExpenses(this.page,this.limit).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res=>{
-        this.expenses = res;
-        this.expenseSer.updateExpenseCount(res.length);
-        this.totalCalculation()
+        this.expenses = res.expenseData;
+        this.totalCount = res.totalCount; 
+        this.totalSpent = res.totalSpent;
+        this.chartCategoryData = res.categoryData;
+        this.totalPages = Math.ceil(this.totalCount/this.limit)
+        this.expenseSer.updateExpenseCount(res.totalCount);
+        this.totalCalculation();
+        this.buildCharts(res.categoryData, res.dailyData, res.monthlyData);
       },
       error: err=>{
         this.error = err.error?.message || 'Failed to load expenses';
       }
     })
   }
+
+ nextPage(){
+  if(this.page < this.totalPages){ 
+   this.page++;
+   this.fetchAllExpenses();
+  }
+  }
+
+  previousPage(){
+    if(this.page > 1){
+      this.page--;
+      this.fetchAllExpenses();
+    }
+  }
+
 
  editExpForm(exp:Expense){
   this.selectExp = exp;
@@ -144,11 +169,8 @@ export class UserContent implements OnInit {
   }
 
   totalCalculation() {
-    this.totalSpent = this.expenses.reduce((x, y) => x + y.amount, 0
-    )
     this.remaining = this.budget - this.totalSpent;
     this.spentPercentage = this.budget > 0 ? (this.totalSpent/this.budget)*100 : 0;
-    this.buildCharts()
   }
 
   toggleAccordion() {
@@ -165,15 +187,11 @@ export class UserContent implements OnInit {
   }
 
   get categoryBreakdown(): { category: string; amount: number; color: string; percent: number }[] {
-    const map: Record<string, number> = {};
-    this.expenses.forEach(exp => {
-      map[exp.category] = (map[exp.category] || 0) + exp.amount;
-    });
-    return Object.keys(map).map(cat => ({
-      category: cat,
-      amount: map[cat],
-      color: this.categoryColors[cat] || '#94a3b8',
-      percent: this.totalSpent > 0 ? Math.round((map[cat] / this.totalSpent) * 100) : 0
+    return this.chartCategoryData.map(c => ({
+      category: c._id,
+      amount: c.total,
+      color: this.categoryColors[c._id] || '#94a3b8',
+      percent: this.totalSpent > 0 ? Math.round((c.total / this.totalSpent) * 100) : 0
     })).sort((a, b) => b.amount - a.amount);
   }
 
@@ -185,20 +203,18 @@ export class UserContent implements OnInit {
     return this.categoryBreakdown.filter((_, i) => i % 2 === 1);
   }
  
-  buildCharts(){
-    const categoryData: Record<string,number> = {};
-    this.expenses.forEach((exp)=>{
-      categoryData[exp.category] = (categoryData[exp.category] || 0) + exp.amount 
-    })
-    const categories = Object.keys(categoryData);
-    const amount = Object.values(categoryData);
-    const colors = categories.map((color)=>
-      this.categoryColors[color] || '#94a3b8'
-    )
+  buildCharts(
+    categoryData: { _id: string, total: number }[],
+    dailyData: { _id: string, total: number }[],
+    monthlyDataRaw: { _id: { year: number, month: number }, total: number }[]
+  ){
+    const categories = categoryData.map(c => c._id);
+    const amounts = categoryData.map(c => c.total);
+    const colors = categories.map(cat => this.categoryColors[cat] || '#94a3b8');
     this.doughnutData = {
-      labels:categories , datasets: [{
-        data:amount,
-        backgroundColor:colors,
+      labels: categories, datasets: [{
+        data: amounts,
+        backgroundColor: colors,
         borderColor: '#ffffff',
         borderWidth: 2,
         hoverBorderColor: '#ffffff',
@@ -207,44 +223,33 @@ export class UserContent implements OnInit {
       }]
     }
 
-  const dateData : Record<string,number> = {}
-  this.expenses.forEach((expDate)=>{
-    const label = expDate.date.split('T')[0]
-    dateData[label] = (dateData[label] || 0 ) + expDate.amount
-  })
-   this.barData = {
-   labels: Object.keys(dateData),
-   datasets: [{
-    data: Object.values(dateData),
-    backgroundColor: '#5B8FF9',
-    hoverBackgroundColor: '#3B7BF7',
-    borderRadius: 8,
-    borderSkipped: false
-  }]
-};
+    this.barData = {
+      labels: dailyData.map(d => d._id),
+      datasets: [{
+        data: dailyData.map(d => d.total),
+        backgroundColor: '#5B8FF9',
+        hoverBackgroundColor: '#3B7BF7',
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    };
 
-  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const monthData: Record<string, number> = {};
-  this.expenses.forEach((exp) => {
-    const d = new Date(exp.date);
-    const label = monthNames[d.getMonth()] + ' ' + d.getFullYear();
-    monthData[label] = (monthData[label] || 0) + exp.amount;
-  });
-  this.monthlyData = {
-    labels: Object.keys(monthData),
-    datasets: [{
-      data: Object.values(monthData),
-      borderColor: '#10b981',
-      backgroundColor: 'rgba(16,185,129,0.1)',
-      pointBackgroundColor: '#10b981',
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2,
-      pointRadius: 5,
-      pointHoverRadius: 7,
-      tension: 0.4,
-      fill: true
-    }]
-  };
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    this.monthlyData = {
+      labels: monthlyDataRaw.map(m => monthNames[m._id.month - 1] + ' ' + m._id.year),
+      datasets: [{
+        data: monthlyDataRaw.map(m => m.total),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.1)',
+        pointBackgroundColor: '#10b981',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.4,
+        fill: true
+      }]
+    };
   }
                                                                      
 

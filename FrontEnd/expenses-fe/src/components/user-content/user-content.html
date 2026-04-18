@@ -218,8 +218,24 @@
       }
     </div>
   </div>
+<div class="px-4 sm:px-5 py-3 border-t border-slate-100 dark:border-neutral-800 flex items-center justify-between">
+  <button (click)="previousPage()" 
+    [disabled]="page === 1"
+    class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+    [ngClass]="page === 1 ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600'">
+    <fa-icon [icon]="['fas','chevron-left']" class="text-xs"></fa-icon>
+  </button>
+  <span class="text-xs text-slate-500 dark:text-neutral-400">
+    Page {{page}} of {{totalPages}}
+  </span>
+  <button (click)="nextPage()" 
+    [disabled]="page === totalPages"
+    class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+    [ngClass]="page === totalPages ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600'">
+    <fa-icon [icon]="['fas','chevron-right']" class="text-xs"></fa-icon>
+  </button>
+</div>
   }
-
   @if (activeTab === 'analytics') {
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mb-4 sm:mb-5">
     <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 dark:border-neutral-800 p-5 sm:p-6">

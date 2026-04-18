@@ -28,9 +28,38 @@ router.post('/add-expense',authMiddleware,async(req,res)=>{
 
 router.get('/get-all-expenses', authMiddleware, async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const skip = (page-1)*limit;
         const userId = req.user.userId
-        const foundExpense = await expense.find({ userId })
-        return res.status(200).json(foundExpense)
+        const foundExpense = await expense.find({ userId }).skip(skip).limit(limit);
+        const totalCount = await expense.countDocuments({userId})
+        const totalSpent = await expense.aggregate([
+            { $match: { userId: new (require('mongoose').Types.ObjectId)(userId) } },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ])
+        const categoryData = await expense.aggregate([
+            { $match: { userId: new (require('mongoose').Types.ObjectId)(userId) } },
+            { $group: { _id: "$category", total: { $sum: "$amount" } } }
+        ])
+        const dailyData = await expense.aggregate([
+            { $match: { userId: new (require('mongoose').Types.ObjectId)(userId) } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } }, total: { $sum: "$amount" } } },
+            { $sort: { _id: 1 } }
+        ])
+        const monthlyData = await expense.aggregate([
+            { $match: { userId: new (require('mongoose').Types.ObjectId)(userId) } },
+            { $group: { _id: { year: { $year: "$date" }, month: { $month: "$date" } }, total: { $sum: "$amount" } } },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ])
+        return res.status(200).json({
+            expenseData: foundExpense,
+            totalCount,
+            totalSpent: totalSpent[0]?.total || 0,
+            categoryData,
+            dailyData,
+            monthlyData
+        });
     }
     catch (err) {
         return res.status(500).json({ message: 'Unable to fetch the expenses', error: err.message })

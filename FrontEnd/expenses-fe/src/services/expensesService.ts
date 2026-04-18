@@ -22,8 +22,15 @@ export class ExpensesService {
         return this.http.post<MessageResponse>(`${this.apiURL}/api/add-expense`, expense);
     }
 
-    getAllExpenses(): Observable<Expense[]> {
-        return this.http.get<Expense[]>(`${this.apiURL}/api/get-all-expenses`);
+    getAllExpenses(page: number, limit: number): Observable<{
+        expenseData: Expense[],
+        totalCount: number,
+        totalSpent: number,
+        categoryData: { _id: string, total: number }[],
+        dailyData: { _id: string, total: number }[],
+        monthlyData: { _id: { year: number, month: number }, total: number }[]
+    }> {
+        return this.http.get<{ expenseData: Expense[], totalCount: number, totalSpent: number, categoryData: { _id: string, total: number }[], dailyData: { _id: string, total: number }[], monthlyData: { _id: { year: number, month: number }, total: number }[] }>(`${this.apiURL}/api/get-all-expenses?page=${page}&limit=${limit}`);
     }
 
     updateExpense(id: string, expense: Expense): Observable<MessageResponse> {
