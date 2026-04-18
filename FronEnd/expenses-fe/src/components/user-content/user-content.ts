@@ -1,8 +1,9 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { expensesService } from '../../services/expensesService';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ExpensesService } from '../../services/expensesService';
 import { Expense } from '../../interfaces/addExpense.model';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser } from '@fortawesome/free-solid-svg-icons';
@@ -20,10 +21,12 @@ export interface ChatMsg{
   selector: 'app-user-content',
   imports: [FaIconComponent, CommonModule, FormsModule, AddExpense, BaseChartDirective],
   templateUrl: './user-content.html',
-  styleUrl: './user-content.css',
+  styleUrls: ['./user-content.css'],
   standalone:true,
 })
-export class UserContent {
+export class UserContent implements OnInit {
+  private destroyRef = inject(DestroyRef);
+
   selectExp!: Expense;
   greet:string = '';
   today = new Date();
@@ -59,7 +62,7 @@ export class UserContent {
    userText: string = '';
    messages:ChatMsg[] = []
 
-  constructor(private expenseSer:expensesService, private sanitizer:DomSanitizer, library:FaIconLibrary){
+  constructor(private expenseSer:ExpensesService, private sanitizer:DomSanitizer, library:FaIconLibrary){
    library.addIcons(faHandshake, faWallet, faChevronUp, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser)
   }
   ngOnInit(){
@@ -84,37 +87,35 @@ export class UserContent {
   }
 
   fetchBudget(){
-    this.expenseSer.getBudget().subscribe({
+    this.expenseSer.getBudget().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: res=>{
           this.budget = res.budget;
         },
         error: err=>{
-          return err.error.message;
+          this.error = err.error?.message || 'Failed to load budget';
         }
       })
 
   }
   
   saveBudget(){
-    this.expenseSer.updateBudget(this.budget).subscribe({
+    this.expenseSer.updateBudget(this.budget).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res=>{
         this.budget = res.budget;
         this.totalCalculation();
         this.isEditingBudget = false
       },
       error: err=>{
-        return err.error.message;
+        this.error = err.error?.message || 'Failed to update budget';
       }
     })
   }
 
    fetchAllExpenses(){
-    console.log("called")
-    this.expenseSer.getAllExpenses().subscribe({
+    this.expenseSer.getAllExpenses().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res=>{
         this.expenses = res;
         this.expenseSer.updateExpenseCount(res.length);
-        console.log(this.expenses)
         this.totalCalculation()
       },
       error: err=>{
@@ -129,7 +130,7 @@ export class UserContent {
  }
 
  deleteExp(exp:Expense){
-  this.expenseSer.deleteExpense(exp._id).subscribe({
+  this.expenseSer.deleteExpense(exp._id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
     next: res=>{
       this.success = res.message;
       this.fetchAllExpenses();
@@ -189,13 +190,11 @@ export class UserContent {
     this.expenses.forEach((exp)=>{
       categoryData[exp.category] = (categoryData[exp.category] || 0) + exp.amount 
     })
-    console.log(categoryData)
     const categories = Object.keys(categoryData);
     const amount = Object.values(categoryData);
     const colors = categories.map((color)=>
       this.categoryColors[color] || '#94a3b8'
     )
-    console.log(categories,colors)
     this.doughnutData = {
       labels:categories , datasets: [{
         data:amount,
@@ -264,36 +263,20 @@ export class UserContent {
     this.messages.push({text:userText,isUser:true});
     this.userText = '';
     this.isLoading = true;
-    this.expenseSer.aiChat(userText).subscribe({
-      next: res=>{
+    this.expenseSer.aiChat(userText).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res)=>{
         this.isLoading = false;
         this.messages.push({text:res.reply,isUser:false});
         
-        console.log('🤖 AI Response:', res);
-        
-        // If AI detected and added an expense, refresh the list
         if(res.expenseAdded && res.expense) {
-          console.log('✅ Expense detected in response:', res.expense);
-          
-          // Add to local array
           this.expenses.push(res.expense);
-          
-          // Recalculate totals and charts
           this.totalCalculation();
-          
-          // Show success message
           this.success = `✓ Expense added: ₹${res.expense.amount} for ${res.expense.category}`;
-          console.log('💾 Total expenses now:', this.expenses.length);
-          
-          // Clear success message after 3 seconds
           setTimeout(() => { this.success = '' }, 3000);
-        } else {
-          console.log('ℹ️  No expense in response. expenseAdded:', res.expenseAdded);
         }
       },
-      error: err=>{
+      error: ()=>{
           this.isLoading = false;
-          console.error('❌ AI Chat Error:', err);
           this.messages.push({text:'Something went wrong. Try again.', isUser: false })
       }
     })

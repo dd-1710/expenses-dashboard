@@ -1,59 +1,48 @@
 import { Injectable } from "@angular/core";
-import { catchError, Observable, throwError } from "rxjs";
+import { Observable, BehaviorSubject } from "rxjs";
 import { HttpClient } from "@angular/common/http";
 import { environment } from "../environments/environment";
-import { Expense } from "../interfaces/addExpense.model";
-import { BehaviorSubject } from "rxjs";
+import { Expense, MessageResponse, BudgetResponse, AiChatResponse } from "../interfaces/addExpense.model";
+
 @Injectable({
     providedIn: 'root'
 })
-
-export class expensesService {
-
-    constructor(private http: HttpClient) {
-
-    }
-
+export class ExpensesService {
+    private apiURL = environment.apiUrl;
     private expenseCount = new BehaviorSubject<number>(0);
     expenseCount$ = this.expenseCount.asObservable();
 
+    constructor(private http: HttpClient) {}
 
-    updateExpenseCount(count:number){
-        this.expenseCount.next(count)
+    updateExpenseCount(count: number) {
+        this.expenseCount.next(count);
     }
 
-
-    apiURL = environment.apiUrl;
-
-    private handleError(err: any): Observable<never> {
-        return throwError(() => err);
+    addExpense(expense: Expense): Observable<MessageResponse> {
+        return this.http.post<MessageResponse>(`${this.apiURL}/api/add-expense`, expense);
     }
 
-    addExpense(expense: Expense): Observable<any> {
-        return this.http.post(`${this.apiURL}/api/add-expense`, expense).pipe(catchError(err => this.handleError(err)));
+    getAllExpenses(): Observable<Expense[]> {
+        return this.http.get<Expense[]>(`${this.apiURL}/api/get-all-expenses`);
     }
 
-    getAllExpenses(): Observable<any> {
-        return this.http.get(`${this.apiURL}/api/get-all-expenses`).pipe(catchError(err => this.handleError(err)));
+    updateExpense(id: string, expense: Expense): Observable<MessageResponse> {
+        return this.http.put<MessageResponse>(`${this.apiURL}/api/update-expense/${id}`, expense);
     }
 
-    updateExpense(id: string, expense: Expense): Observable<any> {
-        return this.http.put(`${this.apiURL}/api/update-expense/${id}`, expense).pipe(catchError(err => this.handleError(err)));
+    deleteExpense(id: string): Observable<MessageResponse> {
+        return this.http.delete<MessageResponse>(`${this.apiURL}/api/delete-expense/${id}`);
     }
 
-    deleteExpense(id: string): Observable<any> {
-        return this.http.delete(`${this.apiURL}/api/delete-expense/${id}`).pipe(catchError(err => this.handleError(err)));
+    getBudget(): Observable<BudgetResponse> {
+        return this.http.get<BudgetResponse>(`${this.apiURL}/api/get-user-budget`);
     }
 
-    getBudget(): Observable<any> {
-        return this.http.get(`${this.apiURL}/api/get-user-budget`).pipe(catchError(err => this.handleError(err)));
+    updateBudget(budget: number): Observable<BudgetResponse> {
+        return this.http.put<BudgetResponse>(`${this.apiURL}/api/update-user-budget`, { budget });
     }
 
-    updateBudget(budget: number): Observable<any> {
-        return this.http.put(`${this.apiURL}/api/update-user-budget`, { budget }).pipe(catchError(err => this.handleError(err)));
-    }
-
-    aiChat(message: string): Observable<any> {
-        return this.http.post(`${this.apiURL}/api/aichat`,{message}).pipe(catchError(err => this.handleError(err)));
+    aiChat(message: string): Observable<AiChatResponse> {
+        return this.http.post<AiChatResponse>(`${this.apiURL}/api/aichat`, { message });
     }
 }

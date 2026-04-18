@@ -10,6 +10,9 @@ const authMiddleware = require('../middleware/authmiddleware');
 router.post('/signUp',async(req,res)=>{
     try{
         const {userName,password} = req.body;
+        if(!userName || !password || userName.length < 3 || password.length < 4){
+            return res.status(400).json({message:"Username (min 3) and Password (min 4) are required"});
+        }
         const existingUser = await user.findOne({userName})
         if(existingUser){
             return res.status(400).json({message:"User Already Exists"});
@@ -26,6 +29,9 @@ router.post('/signUp',async(req,res)=>{
 router.post('/signIn',async(req,res)=>{
     try{
         const {userName,password} = req.body;
+        if(!userName || !password){
+            return res.status(400).json({message:"Username and Password are required"});
+        }
         const checkUser = await user.findOne({userName});
         if(!checkUser){
            return res.status(401).json({message:"User Doesn't Exist, Please SignUp"});
@@ -66,7 +72,4 @@ router.put('/update-user-budget',authMiddleware,async(req,res)=>{
     }
 })
 
-module.exports = function (req, res) {
-  res.status(200).json({ message: "User API working ✅" });
-};
 module.exports = router;

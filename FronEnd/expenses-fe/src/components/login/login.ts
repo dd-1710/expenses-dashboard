@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FaIconLibrary, FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faEye, faEyeSlash, faUser, faLock, faSignInAlt, faUserPlus, faWallet, faChartPie, faPlus, faList, faChartLine, faHeart ,faIndianRupeeSign } from '@fortawesome/free-solid-svg-icons';
 import { UserService } from '../../services/userService';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -13,6 +14,7 @@ import { Router } from '@angular/router';
   styleUrl: './login.css',
 })
 export class Login implements OnInit {
+  private destroyRef = inject(DestroyRef);
   loginForm!: FormGroup;
   isSignUp = false;
   showPassword = false;
@@ -58,7 +60,7 @@ export class Login implements OnInit {
     this.error = '';
     const {userName,password} = this.loginForm.value;
     if (this.isSignUp) {
-      this.userService.signUp(userName, password).subscribe({
+      this.userService.signUp(userName, password).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.success = res.message;
           setTimeout(()=>{
@@ -75,7 +77,7 @@ export class Login implements OnInit {
       })
 
     } else {
-      this.userService.signIn(userName,password).subscribe({
+      this.userService.signIn(userName,password).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res)=>{
           this.success = res.message;
           this.success = '';

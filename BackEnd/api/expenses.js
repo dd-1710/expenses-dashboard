@@ -14,12 +14,9 @@ router.post('/add-expense',authMiddleware,async(req,res)=>{
         
         // Check if user has set a budget
         const user = await User.findById(userId);
-        console.log('🔍 Budget Check - User:', user?.userName, 'Budget:', user?.budget, 'Type:', typeof user?.budget);
         if(!user || !user.budget || user.budget <= 0) {
-            console.log('❌ Budget validation FAILED - rejecting expense');
-            return res.status(403).json({message:"⚠️  Budget not set! Please set your monthly budget before adding expenses."})
+            return res.status(403).json({message:"Budget not set! Please set your monthly budget before adding expenses."})
         }
-        console.log('✅ Budget validation PASSED - allowing expense');
         
         await expense.create({userId,amount,category,description,date});
         return res.status(201).json({message:"Expenses Added!!"})

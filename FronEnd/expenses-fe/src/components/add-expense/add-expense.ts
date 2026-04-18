@@ -1,11 +1,12 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
 import { FormGroup, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FaIconComponent, FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { faIndianRupeeSign, faTag, faPen, faCalendar, faXmark, faPlus, faChevronDown, faUtensils, faCartShopping, faPlane, faHeartPulse, faShieldHalved, faCar, faFilm, faFileInvoice, faGraduationCap, faEllipsis, faCheck, faStickyNote, faArrowsRotate, faChartLine } from '@fortawesome/free-solid-svg-icons';
-import { expensesService } from '../../services/expensesService';
+import { ExpensesService } from '../../services/expensesService';
 import { Expense } from '../../interfaces/addExpense.model';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 @Component({
   selector: 'app-add-expense',
   imports: [CommonModule, ReactiveFormsModule, FaIconComponent],
@@ -14,17 +15,17 @@ import { Expense } from '../../interfaces/addExpense.model';
   standalone: true,
 })
 export class AddExpense{
+   private destroyRef = inject(DestroyRef);
    @Output() close = new EventEmitter<void>();
    @Output() fetchExpData = new EventEmitter<void>();
    @Input() editedData!:Expense;
-  constructor(private fb: FormBuilder, library: FaIconLibrary,private expenseSer:expensesService) {
+  constructor(private fb: FormBuilder, library: FaIconLibrary,private expenseSer:ExpensesService) {
     library.addIcons(faIndianRupeeSign, faTag, faPen, faCalendar, faXmark, faPlus, faChevronDown, faUtensils, faCartShopping, faPlane, faHeartPulse, faShieldHalved, faCar, faFilm, faFileInvoice, faGraduationCap, faEllipsis, faCheck,faStickyNote,faArrowsRotate,faChartLine);
     this.buildForm();
   }
 
   ngOnInit(){
     if(this.editedData){
-      console.log(this.editedData)
       this.isEdit = true;
       this.addExpenseForm.patchValue({
       ...this.editedData,
@@ -96,7 +97,7 @@ export class AddExpense{
   addExpense() {
     // Check if budget is set before adding expense
     if(this.addExpenseForm.value.amount && !this.isEdit) {
-      this.expenseSer.getBudget().subscribe({
+      this.expenseSer.getBudget().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (budgetRes) => {
           if(budgetRes.budget === 0 || budgetRes.budget === undefined) {
             this.error = '⚠️  Budget not set! Please set your monthly budget before adding expenses.';
@@ -122,7 +123,7 @@ export class AddExpense{
 
   submitExpense() {
     if(this.isEdit){
-      this.expenseSer.updateExpense(this.editedData._id,this.addExpenseForm.value).subscribe({
+      this.expenseSer.updateExpense(this.editedData._id,this.addExpenseForm.value).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: res=>{
           this.success = res.message;
           setTimeout(()=>{
@@ -140,7 +141,7 @@ export class AddExpense{
       })
 
     }else{
-    this.expenseSer.addExpense(this.addExpenseForm.value).subscribe({
+    this.expenseSer.addExpense(this.addExpenseForm.value).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.success = res.message;
         setTimeout(() => {

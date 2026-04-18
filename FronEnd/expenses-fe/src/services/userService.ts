@@ -1,30 +1,22 @@
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { catchError, Observable, tap } from "rxjs";
-import {environment} from '../environments/environment'
+import { Observable } from "rxjs";
+import { environment } from '../environments/environment';
+import { AuthResponse, MessageResponse } from '../interfaces/addExpense.model';
 
 @Injectable({
-    providedIn:'root',
+    providedIn: 'root',
 })
-
-export class UserService{
-    constructor(private http:HttpClient){
-    }
-
+export class UserService {
     private apiURL = environment.apiUrl;
 
-    signIn(userName:string,password:string):Observable<any>{
-     return this.http.post(`${this.apiURL}/api/signIn`,{userName,password})
-    //  .pipe(
-    //     tap({error:(err)=>console.log("Login Failed !",err)})
-    //  )
+    constructor(private http: HttpClient) {}
+
+    signIn(userName: string, password: string): Observable<AuthResponse> {
+        return this.http.post<AuthResponse>(`${this.apiURL}/api/signIn`, { userName, password });
     }
 
-
-    signUp(userName:string,password:string):Observable<any>{
-      return this.http.post(`${this.apiURL}/api/signUp`,{userName,password})
-    // .pipe(
-    //     tap({error:(err)=>console.log("SignUp Failed",err)})
-    //  )
+    signUp(userName: string, password: string): Observable<MessageResponse> {
+        return this.http.post<MessageResponse>(`${this.apiURL}/api/signUp`, { userName, password });
     }
 }
