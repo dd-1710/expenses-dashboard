@@ -1,8 +1,23 @@
-# Expenses Dashboard
+# **Smart Expense**
 
-A full-stack expense tracking application with budget analytics, interactive charts, and an AI-powered assistant that detects expenses from natural language.
+A full-stack expense tracking platform with budget analytics, AI-assisted logging, and scenario-based financial insights.
 
-## Screenshots
+---
+
+## **Overview**
+
+Smart Expense enables users to track spending, manage monthly budgets, and analyze expenses through both a structured dashboard and a natural-language chat interface.
+
+The system combines:
+
+* Deterministic backend logic for financial calculations
+* AI-based intent extraction for flexible user interaction
+
+This ensures accuracy while reducing friction in expense tracking.
+
+---
+
+## **Screenshots**
 
 ![Login_Page](Login_Page.png)
 ![View_DashBoard](Expense_DashBoard.png)
@@ -10,71 +25,152 @@ A full-stack expense tracking application with budget analytics, interactive cha
 ![Add_Expense](Expense_Form.png)
 ![AI-Chat](Chat.png)
 
+---
 
-## Tech Stack
+## **Tech Stack**
 
-| Layer | Technology |
-|-------|-----------|
+| Layer    | Technology                         |
+| -------- | ---------------------------------- |
 | Frontend | Angular 21 (Standalone Components) |
-| Styling | Tailwind CSS 4 |
-| Charts | Chart.js + ng2-charts |
-| Icons | FontAwesome |
-| Backend | Node.js, Express 5 |
-| Database | MongoDB + Mongoose |
-| Auth | JWT (JSON Web Tokens) + bcrypt |
-| AI | Groq API (Llama 3.3 70B) |
-| Security | Helmet, Rate Limiting, CORS |
+| Styling  | Tailwind CSS 4                     |
+| Charts   | Chart.js + ng2-charts              |
+| Backend  | Node.js, Express 5                 |
+| Database | MongoDB + Mongoose                 |
+| Auth     | JWT + bcrypt                       |
+| AI       | Groq API (Llama 3.3 70B)           |
+| Security | Helmet, Rate Limiting, CORS        |
 
-## Features
+---
 
-- **Authentication** — Sign up / sign in with hashed passwords and JWT tokens
-- **Budget Management** — Set and update monthly budget with real-time tracking
-- **Expense CRUD** — Add, edit, delete expenses with category tagging and date validation
-- **Analytics Dashboard** — Doughnut chart (category breakdown), bar chart (daily spending), line chart (monthly trend)
-- **AI Chat Assistant** — Natural language expense logging ("spent 500 on food") with automatic extraction and financial advice
-- **Dark Mode** — Full dark theme toggle across all components
-- **Responsive Design** — Mobile-first layout with collapsible navigation
-- **Authorization** — Expense ownership validation on update/delete operations
+## **Core Features**
 
-## Project Structure
+### Authentication
+
+* Secure sign up / sign in
+* Password hashing with bcrypt
+* JWT-based session management
+
+### Budget Management
+
+* Monthly budget setup and updates
+* Real-time tracking of spending vs remaining budget
+
+### Expense Management
+
+* Add, edit, delete expenses
+* Category tagging with validation
+* Date validation (no future / invalid entries)
+
+### Analytics Dashboard
+
+* Doughnut chart → category distribution
+* Bar chart → daily spending
+* Line chart → monthly trends
+
+### AI Chat Assistant
+
+* Natural language expense logging
+* UPI / SMS parsing
+* Budget queries
+* Scenario-based simulations
+
+### Responsive UI
+
+* Mobile-first layout
+* Dark mode support
+
+---
+
+## **Advanced Features**
+
+* What-if simulation (one-time and recurring scenarios)
+* Daily budget calculation based on remaining days
+* Budget overrun detection
+* Context-aware responses based on available data
+* Safe handling of incomplete inputs (missing date flow)
+* Graceful fallback when AI extraction fails
+
+---
+
+## **Key Design Decisions**
+
+### AI used only for intent extraction
+
+The AI assistant is restricted to intent detection and entity extraction.
+All financial logic (budget calculations, projections, simulations) is handled in the backend to prevent hallucinated outputs.
+
+---
+
+### Deterministic financial logic
+
+All monetary calculations are performed in backend services, ensuring consistency and reliability across UI and chat.
+
+---
+
+### Separation of UI and chat workflows
+
+* UI → structured workflows (forms, charts)
+* AI Chat → quick logging, queries, and simulations
+
+Chat complements the dashboard instead of replacing it.
+
+---
+
+### Guarded analytics for low-data scenarios
+
+* No projections with insufficient data
+* No pattern assumptions from minimal inputs
+* No arbitrary financial advice
+
+---
+
+### Scenario-based simulations
+
+Supports:
+
+* One-time scenarios
+* Recurring scenarios (daily spending projections)
+
+All simulations are computed using backend logic.
+
+---
+
+## **Project Structure**
 
 ```
 expenses-dashboard/
 ├── BackEnd/
-│   ├── server.js              # Express server, middleware, DB connection
+│   ├── server.js
 │   ├── api/
-│   │   ├── user.js            # Auth endpoints (signUp, signIn, budget)
-│   │   ├── expenses.js        # Expense CRUD endpoints
-│   │   └── aichat.js          # AI chat with expense extraction
+│   │   ├── user.js
+│   │   ├── expenses.js
+│   │   └── aichat.js
 │   ├── middleware/
-│   │   └── authmiddleware.js  # JWT verification
+│   │   └── authmiddleware.js
 │   └── schemas/
-│       ├── userSchema.js      # User model (userName, password, budget)
-│       └── expenseSchema.js   # Expense model (amount, category, date)
+│       ├── userSchema.js
+│       └── expenseSchema.js
 │
 └── FrontEnd/expenses-fe/
     └── src/
-        ├── app/                # Root component and routing
+        ├── app/
         ├── components/
-        │   ├── login/          # Authentication UI
-        │   ├── header/         # Navigation, dark mode, sign out
-        │   ├── add-expense/    # Expense form modal with validation
-        │   └── user-content/   # Dashboard, charts, expense list, AI chat
         ├── services/
-        │   ├── userService.ts       # Auth API calls
-        │   ├── expensesService.ts   # Expense + budget + AI API calls
-        │   └── auth.interceptor.ts  # JWT token injection
-        ├── authguard/          # Route protection
-        └── interfaces/         # TypeScript interfaces
+        ├── authguard/
+        └── interfaces/
 ```
 
-## Getting Started
+---
+
+## **Getting Started**
 
 ### Prerequisites
 
-- Node.js 18+
-- MongoDB (local or Atlas)
-- Groq API key ([console.groq.com/keys](https://console.groq.com/keys)) — free tier
+* Node.js 18+
+* MongoDB (local or Atlas)
+* Groq API key
+
+---
 
 ### Backend Setup
 
@@ -83,19 +179,23 @@ cd BackEnd
 npm install
 ```
 
-Create a `.env` file:
+Create `.env`:
 
 ```
 PORT=7000
 MONGO_URI=your_mongodb_connection_string
 jwt_secret_key=your_secret_key
 GROQ_API_KEY=your_groq_api_key
-ALLOWED_ORIGINS=http://localhost:5000
+ALLOWED_ORIGINS=http://localhost:4200
 ```
+
+Run:
 
 ```bash
 npm run dev
 ```
+
+---
 
 ### Frontend Setup
 
@@ -105,39 +205,41 @@ npm install
 ng serve
 ```
 
-App runs at `http://localhost:4200`
+App runs at:
 
-### Running Tests
-
-```bash
-# Backend
-cd BackEnd
-npm test
-
-# Frontend
-cd FrontEnd/expenses-fe
-ng test
+```
+http://localhost:4200
 ```
 
-## API Endpoints
+---
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/signUp` | No | Create new user |
-| POST | `/api/signIn` | No | Login, returns JWT |
-| GET | `/api/get-user-budget` | Yes | Get user's budget |
-| PUT | `/api/update-user-budget` | Yes | Update budget |
-| POST | `/api/add-expense` | Yes | Add new expense |
-| GET | `/api/get-all-expenses` | Yes | Get all user expenses |
-| PUT | `/api/update-expense/:id` | Yes | Update expense (owner only) |
-| DELETE | `/api/delete-expense/:id` | Yes | Delete expense (owner only) |
-| POST | `/api/aichat` | Yes | AI chat with expense detection |
+## **API Endpoints**
 
-## Architecture Highlights
+| Method | Endpoint                | Auth | Description    |
+| ------ | ----------------------- | ---- | -------------- |
+| POST   | /api/signUp             | No   | Create user    |
+| POST   | /api/signIn             | No   | Login          |
+| GET    | /api/get-user-budget    | Yes  | Get budget     |
+| PUT    | /api/update-user-budget | Yes  | Update budget  |
+| POST   | /api/add-expense        | Yes  | Add expense    |
+| GET    | /api/get-all-expenses   | Yes  | Get expenses   |
+| PUT    | /api/update-expense/:id | Yes  | Update expense |
+| DELETE | /api/delete-expense/:id | Yes  | Delete expense |
+| POST   | /api/aichat             | Yes  | AI chat        |
 
-- **Standalone Components** — No NgModule, tree-shakable Angular 21 architecture
-- **Typed API Layer** — All service methods return typed Observables (`Observable<Expense[]>`, `Observable<BudgetResponse>`, etc.)
-- **Subscription Management** — `DestroyRef` + `takeUntilDestroyed()` on all subscriptions to prevent memory leaks
-- **AI Two-Step Pipeline** — JSON mode extraction (guaranteed valid JSON) → keyword fallback → chat response
-- **Defense in Depth** — Budget validation on both frontend and backend before expense creation
-- **Rate Limiting** — Auth endpoints limited to 10 requests per 15 minutes
+---
+
+## **Architecture Highlights**
+
+* Angular standalone components (no NgModules)
+* Typed API layer with Observables
+* Subscription cleanup using `takeUntilDestroyed()`
+* AI JSON extraction with fallback logic
+* Backend validation for all financial operations
+* Rate limiting on authentication endpoints
+
+---
+
+## **Summary**
+
+Smart Expense balances structured analytics (dashboard) with flexible interaction (AI chat), while ensuring that financial logic remains accurate, controlled, and reliable.
