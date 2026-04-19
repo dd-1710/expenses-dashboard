@@ -427,7 +427,9 @@ ${spending.context}
 
 Rules:
 • Give 3-4 specific, actionable tips based on THEIR data
+• ONLY use the exact numbers from the data above — never make up or estimate numbers
 • Reference their actual numbers (e.g., "You spend ₹X on Food which is Y% of your budget")
+• Use the Budget Forecast section: mention their exact daily limit and days left in the month
 • Suggest realistic cuts — don't say "stop spending", say "try reducing Food by 20% to save ₹Z"
 • If total spending is very small (under ₹500), focus on building good tracking habits rather than cutting specific categories
 • Keep it under 120 words
