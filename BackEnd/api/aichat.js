@@ -2,7 +2,6 @@ const router = require('express').Router();
 const authMiddleware = require('../middleware/authmiddleware');
 const Expense = require('../schemas/expenseSchema');
 const User = require('../schemas/userSchema');
-const mongoose = require('mongoose');
 const Groq = require('groq-sdk');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -12,93 +11,40 @@ if (GROQ_API_KEY) {
   groq = new Groq({ apiKey: GROQ_API_KEY });
 }
 
-const CHAT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const EXTRACTION_MODEL = 'llama-3.3-70b-versatile';
 
 const VALID_CATEGORIES = [
-  'Food', 'Shopping', 'Vacation', 'Health', 'Insurance',
-  'Transportation', 'Entertainment', 'Bills', 'Education', 'Investment', 'Others'
+  'Food',
+  'Shopping',
+  'Vacation',
+  'Health',
+  'Insurance',
+  'Transportation',
+  'Entertainment',
+  'Bills',
+  'Education',
+  'Investment',
+  'Others'
 ];
 
-// -------- Keyword fallback ----------
-function extractExpenseFromKeywords(userMsg) {
-  const amountMatch = userMsg.match(/(\d[\d,]*)/);
-  if (!amountMatch) return null;
+const SUPPORTED_INTENTS = [
+  'ADD_EXPENSE',
+  'GET_STATUS',
+  'GET_REMAINING',
+  'GET_BURNDOWN',
+  'GET_ADVICE',
+  'GET_RECENT_EXPENSES',
+  'GET_TOP_CATEGORY',
+  'GET_CATEGORY_SPEND',
+  'WHAT_IF',
+  'HELP',
+  'UNKNOWN'
+];
 
-  const amount = parseInt(amountMatch[1].replace(/,/g, ''));
-  if (!amount || amount <= 0 || amount > 10000000) return null;
+// ----------------------------
+// Helpers
+// ----------------------------
 
-  return {
-    amount,
-    category: 'Others',
-    description: userMsg.substring(0, 100)
-  };
-}
-
-// -------- UPI/SMS detection ----------
-function looksLikeUPIOrSMS(message) {
-  const msg = message.toLowerCase();
-  const patterns = [
-    /(?:paid|sent|debited|credited).*(?:upi|gpay|phonepe|paytm|bhim)/i,
-    /(?:upi|gpay|phonepe|paytm|bhim).*(?:paid|sent|debited|credited)/i,
-    /inr\s*[\d,]+.*debited/i,
-    /debited.*inr\s*[\d,]+/i,
-    /rs\.?\s*[\d,]+.*(?:debited|credited|transferred)/i,
-    /(?:txn|transaction).*(?:id|ref|no)/i,
-    /a\/c\s*(?:xx|\*)/i,
-    /vpa[:\s]/i,
-    /upi\s*ref/i
-  ];
-  return patterns.some(p => p.test(message));
-}
-
-// -------- Smart intent detection ----------
-function detectIntent(message) {
-  const msg = message.toLowerCase();
-
-  if (msg.includes('help') || msg.includes('what can you do') || msg.includes('how can you help')) {
-    return 'HELP';
-  }
-
-  // Burndown / forecast queries
-  const burndownKeywords = [
-    'when will i run out', 'burndown', 'forecast', 'last me',
-    'how long', 'budget last', 'run out', 'days left',
-    'daily limit', 'spend per day', 'daily budget',
-    'how much per day', 'how much can i spend today',
-    'pace', 'at this rate'
-  ];
-  if (burndownKeywords.some(k => msg.includes(k))) {
-    return 'BURNDOWN';
-  }
-
-  // UPI / SMS paste — detect before general expense
-  if (looksLikeUPIOrSMS(message)) {
-    return 'UPI_SMS';
-  }
-
-  // Advice queries — asking for tips or recommendations
-  const adviceKeywords = [
-    'tip', 'tips', 'save', 'saving', 'advice', 'suggest', 'recommend',
-    'reduce', 'cut', 'improve', 'budget better', 'overspending',
-    'how to', 'should i', 'what should', 'help me save', 'too much'
-  ];
-  if (adviceKeywords.some(k => msg.includes(k))) {
-    return 'ADVICE';
-  }
-
-  // Expense adding — mentions amounts with action verbs
-  if (/\d/.test(msg) && (
-    msg.includes('spent') || msg.includes('paid') || msg.includes('bought') ||
-    msg.includes('add') || msg.includes('log') || msg.includes('record')
-  )) {
-    return 'EXPENSE';
-  }
-
-  return 'CHAT';
-}
-
-// -------- Safe JSON parse ----------
 function safeJSONParse(text) {
   try {
     return JSON.parse(text);
@@ -107,105 +53,501 @@ function safeJSONParse(text) {
   }
 }
 
-// -------- Build rich spending context ----------
-async function buildSpendingContext(userId, budget) {
-  const objectId = new mongoose.Types.ObjectId(userId);
+function formatCurrency(amount) {
+  return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
+}
 
-  // Category breakdown
-  const categoryData = await Expense.aggregate([
-    { $match: { userId: objectId } },
-    { $group: { _id: '$category', total: { $sum: '$amount' }, count: { $sum: 1 } } },
-    { $sort: { total: -1 } }
-  ]);
+function normalizeCategory(category) {
+  if (!category || typeof category !== 'string') return 'Others';
 
-  // Total spent
-  const totalAgg = await Expense.aggregate([
-    { $match: { userId: objectId } },
-    { $group: { _id: null, total: { $sum: '$amount' } } }
-  ]);
-  const totalSpent = totalAgg[0]?.total || 0;
-  const remaining = budget - totalSpent;
-  const spentPercent = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
+  const found = VALID_CATEGORIES.find(
+    (c) => c.toLowerCase() === category.trim().toLowerCase()
+  );
 
-  // Recent 10 transactions
-  const recentExpenses = await Expense.find({ userId })
-    .sort({ date: -1 })
-    .limit(10)
-    .select('amount category description date');
+  return found || 'Others';
+}
 
-  // Current month spending
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const thisMonthAgg = await Expense.aggregate([
-    { $match: { userId: objectId, date: { $gte: monthStart } } },
-    { $group: { _id: '$category', total: { $sum: '$amount' }, count: { $sum: 1 } } },
-    { $sort: { total: -1 } }
-  ]);
-  const thisMonthTotal = thisMonthAgg.reduce((s, c) => s + c.total, 0);
+function extractAmountFromText(message) {
+  const match = String(message || '').match(/(\d[\d,]*)/);
+  if (!match) return null;
 
-  // Top single expense
-  const topExpense = await Expense.findOne({ userId }).sort({ amount: -1 }).select('amount category description date');
+  const amount = parseInt(match[1].replace(/,/g, ''), 10);
+  if (!amount || amount <= 0 || amount > 10000000) return null;
 
-  // -------- Burndown / daily limit calculation ----------
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day of month
-  const daysLeft = Math.max(1, Math.ceil((monthEnd - now) / (1000 * 60 * 60 * 24)));
-  const dailyLimit = remaining > 0 ? Math.round(remaining / daysLeft) : 0;
+  return amount;
+}
 
-  // Calculate daily burn rate from this month's data
-  const dayOfMonth = now.getDate();
-  const dailyBurnRate = dayOfMonth > 0 ? Math.round(thisMonthTotal / dayOfMonth) : 0;
-  const daysUntilBudgetZero = dailyBurnRate > 0 ? Math.round(remaining / dailyBurnRate) : null;
-  const projectedMonthTotal = dailyBurnRate * new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const projectedOverUnder = budget - projectedMonthTotal;
+function looksLikeUPIOrSMS(message) {
+  const msg = String(message || '').toLowerCase();
 
-  // Build context string
-  const categoryLines = categoryData.map(c =>
-    `  • ${c._id}: ₹${c.total} (${c.count} transactions, ${budget > 0 ? Math.round((c.total / totalSpent) * 100) : 0}% of spending)`
-  ).join('\n');
+  const patterns = [
+    /(?:paid|sent|debited).*(?:upi|gpay|phonepe|paytm|bhim)/i,
+    /(?:upi|gpay|phonepe|paytm|bhim).*(?:paid|sent|debited)/i,
+    /inr\s*[\d,]+.*debited/i,
+    /debited.*inr\s*[\d,]+/i,
+    /rs\.?\s*[\d,]+.*(?:debited|transferred|paid)/i,
+    /(?:txn|transaction).*(?:id|ref|no)/i,
+    /upi\s*ref/i,
+    /vpa[:\s]/i,
+    /a\/c\s*(?:xx|\*)/i
+  ];
 
-  const thisMonthLines = thisMonthAgg.map(c =>
-    `  • ${c._id}: ₹${c.total} (${c.count} txns)`
-  ).join('\n');
+  return patterns.some((p) => p.test(msg));
+}
 
-  const recentLines = recentExpenses.map(e =>
-    `  • ₹${e.amount} on ${e.category}${e.description ? ' (' + e.description + ')' : ''} — ${e.date.toLocaleDateString()}`
-  ).join('\n');
+function getMonthEnd(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
 
+function getMonthRange(date = new Date()) {
   return {
-    totalSpent,
-    remaining,
-    spentPercent,
-    categoryData,
-    thisMonthTotal,
-    context: `
-=== USER'S FINANCIAL SNAPSHOT ===
-Budget: ₹${budget} | Spent: ₹${totalSpent} | Remaining: ₹${remaining} | Used: ${spentPercent}%
-
---- Category Breakdown (All Time) ---
-${categoryLines || '  No expenses yet'}
-
---- This Month (${now.toLocaleString('default', { month: 'long' })}) ---
-Total: ₹${thisMonthTotal}
-${thisMonthLines || '  No expenses this month'}
-
---- Recent Transactions ---
-${recentLines || '  No recent transactions'}
-
---- Biggest Single Expense ---
-${topExpense ? `₹${topExpense.amount} on ${topExpense.category}${topExpense.description ? ' (' + topExpense.description + ')' : ''}` : 'None'}
-
---- Budget Forecast ---
-Days left in month: ${daysLeft}
-Daily spending limit to stay in budget: ₹${dailyLimit}/day
-Current daily burn rate: ₹${dailyBurnRate}/day
-${daysUntilBudgetZero !== null ? `At current pace, budget runs out in: ${daysUntilBudgetZero} days` : 'No spending data to project'}
-Projected month-end total: ₹${projectedMonthTotal}
-${projectedOverUnder >= 0 ? `Projected to save: ₹${projectedOverUnder}` : `Projected to overshoot by: ₹${Math.abs(projectedOverUnder)}`}
-`.trim()
+    start: new Date(date.getFullYear(), date.getMonth(), 1),
+    end: new Date(date.getFullYear(), date.getMonth() + 1, 1)
   };
 }
 
-// -------- Route ----------
+function getDaysLeftInMonth(date = new Date()) {
+  const today = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const monthEnd = getMonthEnd(date);
+  const diffMs = monthEnd - today;
+  return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
+}
+
+function parseExplicitDate(value) {
+  if (!value || typeof value !== 'string') return null;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function parseRelativeDate(text) {
+  if (!text || typeof text !== 'string') return null;
+
+  const msg = text.trim().toLowerCase();
+  const now = new Date();
+
+  if (msg === 'today') {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  if (msg === 'yesterday') {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    d.setDate(d.getDate() - 1);
+    return d;
+  }
+
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+
+  return null;
+}
+
+function isValidExpenseDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+  return date <= today && date >= oneYearAgo;
+}
+
+function isRecurringScenario(message) {
+  const msg = String(message || '').toLowerCase();
+  return (
+    msg.includes('every day') ||
+    msg.includes('daily') ||
+    msg.includes('each day')
+  );
+}
+
+// ----------------------------
+// Fallback intent detection
+// ----------------------------
+
+function quickFallback(message) {
+  const msg = String(message || '').toLowerCase();
+
+  if (
+    msg.includes('help') ||
+    msg.includes('what can you do') ||
+    msg.includes('how can you help')
+  ) {
+    return { intent: 'HELP', expenses: [] };
+  }
+
+  if (
+    msg.includes('what if') ||
+    msg.includes('what happens if') ||
+    msg.includes('if i spend') ||
+    msg.includes('suppose i spend')
+  ) {
+    const amount = extractAmountFromText(message);
+    if (amount) {
+      return {
+        intent: 'WHAT_IF',
+        amount,
+        expenses: []
+      };
+    }
+  }
+
+  if (
+    msg.includes('remaining') ||
+    msg.includes('left') ||
+    msg.includes('budget status') ||
+    msg.includes('how much did i spend') ||
+    msg.includes('spent so far') ||
+    msg.includes("what's my budget") ||
+    msg.includes('whats my budget') ||
+    msg.includes('my budget')
+  ) {
+    return { intent: 'GET_STATUS', expenses: [] };
+  }
+
+  if (
+    msg.includes('daily limit') ||
+    msg.includes('per day') ||
+    msg.includes('run out') ||
+    msg.includes('how long') ||
+    msg.includes('forecast') ||
+    msg.includes('burndown') ||
+    msg.includes('how much can i spend')
+  ) {
+    return { intent: 'GET_BURNDOWN', expenses: [] };
+  }
+
+  if (
+    msg.includes('tip') ||
+    msg.includes('tips') ||
+    msg.includes('save') ||
+    msg.includes('saving') ||
+    msg.includes('advice') ||
+    msg.includes('reduce spending')
+  ) {
+    return { intent: 'GET_ADVICE', expenses: [] };
+  }
+
+  if (
+    msg.includes('recent expenses') ||
+    msg.includes('last expenses') ||
+    msg.includes('last 5') ||
+    msg.includes('recent')
+  ) {
+    return { intent: 'GET_RECENT_EXPENSES', expenses: [], limit: 5 };
+  }
+
+  if (
+    msg.includes('top category') ||
+    msg.includes('highest category') ||
+    msg.includes('most spending')
+  ) {
+    return { intent: 'GET_TOP_CATEGORY', expenses: [] };
+  }
+
+  for (const category of VALID_CATEGORIES) {
+    const lc = category.toLowerCase();
+    if (
+      msg.includes(lc) &&
+      (msg.includes('how much on') ||
+        msg.includes('spent on') ||
+        msg.includes(`${lc} spending`))
+    ) {
+      return {
+        intent: 'GET_CATEGORY_SPEND',
+        category,
+        expenses: []
+      };
+    }
+  }
+
+  const amount = extractAmountFromText(message);
+  const expenseWords = ['spent', 'paid', 'bought', 'add', 'log', 'record'];
+
+  if ((amount && expenseWords.some((word) => msg.includes(word))) || looksLikeUPIOrSMS(message)) {
+    let category = 'Others';
+
+    for (const c of VALID_CATEGORIES) {
+      if (msg.includes(c.toLowerCase())) {
+        category = c;
+        break;
+      }
+    }
+
+    return {
+      intent: 'ADD_EXPENSE',
+      expenses: [
+        {
+          amount,
+          category,
+          description: message.slice(0, 120),
+          date: null
+        }
+      ]
+    };
+  }
+
+  return { intent: 'UNKNOWN', expenses: [] };
+}
+
+// ----------------------------
+// AI extraction only
+// ----------------------------
+
+async function extractIntent(message) {
+  const today = new Date().toISOString().split('T')[0];
+
+  const systemPrompt = `
+You are an expense assistant extractor.
+
+Return ONLY valid JSON.
+Do not return markdown.
+Do not explain anything.
+
+Schema:
+{
+  "intent": "ADD_EXPENSE" | "GET_STATUS" | "GET_REMAINING" | "GET_BURNDOWN" | "GET_ADVICE" | "GET_RECENT_EXPENSES" | "GET_TOP_CATEGORY" | "GET_CATEGORY_SPEND" | "WHAT_IF" | "HELP" | "UNKNOWN",
+  "expenses": [
+    {
+      "amount": number,
+      "category": string,
+      "description": string,
+      "date": "YYYY-MM-DD" | null
+    }
+  ],
+  "category": string | null,
+  "limit": number | null,
+  "amount": number | null
+}
+
+Rules:
+- Use only these categories: ${VALID_CATEGORIES.join(', ')}
+- UPI or bank SMS may contain merchant and amount. Extract them as ADD_EXPENSE
+- If date is not explicitly present in the message, return date: null
+- Never invent multiple expenses unless clearly mentioned
+- "How much did I spend", "budget status", "remaining budget", "what's my budget" => GET_STATUS or GET_REMAINING
+- "How much can I spend per day", "when will budget run out", "forecast" => GET_BURNDOWN
+- "tips", "save money", "reduce spending" => GET_ADVICE
+- "last 5 expenses", "recent expenses" => GET_RECENT_EXPENSES
+- "highest category" => GET_TOP_CATEGORY
+- "how much on food/shopping" => GET_CATEGORY_SPEND with category
+- "what happens if I spend 500", "if I spend 1000 today", "what if I spend X", "what if I spend 200 every day" => WHAT_IF with amount
+- Today's date is ${today}
+- If unsure, return UNKNOWN
+`;
+
+  try {
+    const response = await groq.chat.completions.create({
+      model: EXTRACTION_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ]
+    });
+
+    const parsed = safeJSONParse(response.choices?.[0]?.message?.content || '');
+
+    if (!parsed || !SUPPORTED_INTENTS.includes(parsed.intent)) {
+      return quickFallback(message);
+    }
+
+    return {
+      intent: parsed.intent,
+      expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+      category: parsed.category || null,
+      limit: Number.isInteger(parsed.limit) && parsed.limit > 0 ? parsed.limit : 5,
+      amount:
+        typeof parsed.amount === 'number' && parsed.amount > 0
+          ? parsed.amount
+          : null
+    };
+  } catch {
+    return quickFallback(message);
+  }
+}
+
+// ----------------------------
+// Data aggregation
+// ----------------------------
+
+async function loadExpenseStats(userId, budget) {
+  const allExpenses = await Expense.find({ userId }).sort({ date: -1 });
+
+  const totalSpent = allExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  const remaining = Number(budget || 0) - totalSpent;
+  const spentPercent = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
+
+  const { start: monthStart, end: monthEndExclusive } = getMonthRange(new Date());
+
+  const monthExpenses = allExpenses.filter((e) => {
+    const d = new Date(e.date);
+    return d >= monthStart && d < monthEndExclusive;
+  });
+
+  const thisMonthSpent = monthExpenses.reduce(
+    (sum, e) => sum + Number(e.amount || 0),
+    0
+  );
+
+  const daysLeft = getDaysLeftInMonth(new Date());
+  const dailyLimit = remaining > 0 ? Math.floor(remaining / daysLeft) : 0;
+
+  const today = new Date();
+  const elapsedDays = Math.max(today.getDate(), 1);
+  const currentDailyBurnRate =
+    elapsedDays > 0 ? Math.round(thisMonthSpent / elapsedDays) : 0;
+
+  let projectedMonthTotal = null;
+  if (currentDailyBurnRate > 0) {
+    projectedMonthTotal = currentDailyBurnRate * getMonthEnd(today).getDate();
+  }
+
+  const categoryTotals = {};
+  for (const expense of monthExpenses) {
+    const category = normalizeCategory(expense.category);
+    categoryTotals[category] =
+      (categoryTotals[category] || 0) + Number(expense.amount || 0);
+  }
+
+  const sortedCategories = Object.entries(categoryTotals)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const topCategory = sortedCategories[0] || null;
+
+  return {
+    allExpenses,
+    totalSpent,
+    remaining,
+    spentPercent,
+    monthExpenses,
+    thisMonthSpent,
+    daysLeft,
+    dailyLimit,
+    currentDailyBurnRate,
+    projectedMonthTotal,
+    sortedCategories,
+    topCategory
+  };
+}
+
+// ----------------------------
+// Response builders
+// ----------------------------
+
+function buildAdviceReply({
+  budget,
+  totalSpent,
+  remaining,
+  daysLeft,
+  dailyLimit,
+  monthExpenses,
+  topCategory
+}) {
+  if (monthExpenses.length < 3) {
+    return `You've spent ${formatCurrency(totalSpent)} out of ${formatCurrency(budget)} (${budget > 0 ? Math.round((totalSpent / budget) * 100) : 0}%), with ${formatCurrency(remaining)} remaining. There isn't enough data yet for strong personalized tips. Keep tracking your expenses, and I'll identify spending patterns as more data builds up.`;
+  }
+
+  const parts = [];
+
+  parts.push(
+    `You've spent ${formatCurrency(totalSpent)} out of ${formatCurrency(budget)}, with ${formatCurrency(remaining)} remaining.`
+  );
+
+  if (daysLeft > 0) {
+    parts.push(
+      `You have ${daysLeft} day${daysLeft > 1 ? 's' : ''} left in the month, so keeping daily spending around ${formatCurrency(dailyLimit)} can help you stay within budget.`
+    );
+  }
+
+  if (topCategory) {
+    parts.push(
+      `Your top spending category this month is ${topCategory.category} at ${formatCurrency(topCategory.amount)}.`
+    );
+  }
+
+  if (budget > 0) {
+    const usage = Math.round((totalSpent / budget) * 100);
+
+    if (usage >= 90) {
+      parts.push(
+        `You've already used most of your budget, so cut non-essential spending for the rest of the month.`
+      );
+    } else if (usage >= 75) {
+      parts.push(
+        `Your budget usage is getting high, so be careful with discretionary expenses.`
+      );
+    } else {
+      parts.push(
+        `You're still within budget, so the main focus is staying consistent and avoiding sudden spikes.`
+      );
+    }
+  }
+
+  return parts.join(' ');
+}
+
+function formatRecentExpenses(expenses, limit = 5) {
+  const recent = expenses.slice(0, Math.min(limit, 10));
+
+  if (!recent.length) {
+    return 'No expenses found yet.';
+  }
+
+  return recent
+    .map((e, index) => {
+      const category = normalizeCategory(e.category);
+      const date = new Date(e.date).toLocaleDateString('en-IN');
+      return `${index + 1}. ${category} — ${formatCurrency(e.amount)} on ${date}`;
+    })
+    .join('\n');
+}
+
+function buildWhatIfReply({ amount, stats, budget, recurring }) {
+  if (!amount || amount <= 0) {
+    return 'Please specify a valid amount.';
+  }
+
+  if (recurring) {
+    const totalFutureSpend = amount * stats.daysLeft;
+    const newRemaining = stats.remaining - totalFutureSpend;
+
+    if (newRemaining < 0) {
+      return `If you spend ${formatCurrency(amount)} every day for the next ${stats.daysLeft} day${stats.daysLeft > 1 ? 's' : ''}, you will spend ${formatCurrency(totalFutureSpend)} in total. This exceeds your remaining budget of ${formatCurrency(stats.remaining)} by ${formatCurrency(Math.abs(newRemaining))}.`;
+    }
+
+    if (newRemaining === 0) {
+      return `If you spend ${formatCurrency(amount)} every day for the next ${stats.daysLeft} day${stats.daysLeft > 1 ? 's' : ''}, you will exactly use up your remaining budget of ${formatCurrency(stats.remaining)}.`;
+    }
+
+    return `If you spend ${formatCurrency(amount)} every day for the next ${stats.daysLeft} day${stats.daysLeft > 1 ? 's' : ''}, you will have ${formatCurrency(newRemaining)} left by the end of the month.`;
+  }
+
+  const newSpent = stats.totalSpent + amount;
+  const newRemaining = budget - newSpent;
+
+  if (newRemaining < 0) {
+    return `If you spend ${formatCurrency(amount)}, your total spending will become ${formatCurrency(newSpent)}, which exceeds your budget by ${formatCurrency(Math.abs(newRemaining))}.`;
+  }
+
+  if (newRemaining === 0) {
+    return `If you spend ${formatCurrency(amount)}, you will use your entire budget (${formatCurrency(budget)}), leaving ₹0 for the rest of the month. That would leave you ${stats.daysLeft} day${stats.daysLeft > 1 ? 's' : ''} with no budget remaining.`;
+  }
+
+  return `If you spend ${formatCurrency(amount)}, you will have ${formatCurrency(newRemaining)} left for the rest of the month. That would leave you ${stats.daysLeft} day${stats.daysLeft > 1 ? 's' : ''} to manage the remaining budget.`;
+}
+
+// ----------------------------
+// Route
+// ----------------------------
+
 router.post('/aichat', authMiddleware, async (req, res) => {
   try {
     if (!GROQ_API_KEY) {
@@ -214,279 +556,325 @@ router.post('/aichat', authMiddleware, async (req, res) => {
       });
     }
 
-    const { message } = req.body;
+    const { message, draftExpense } = req.body;
 
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ message: 'Message is required' });
-    }
-
-    const intent = detectIntent(message);
-
-    // -------- HELP ----------
-    if (intent === 'HELP') {
-      return res.json({
-        reply: `Here's what I can do for you:
-
-**� Paste UPI/SMS to add expenses**
-• Paste "Paid ₹450 to Swiggy via UPI" — I'll auto-extract it
-• Paste bank SMS like "INR 1,200 debited at Amazon"
-• I detect the merchant and pick the right category
-
-**⏱️ Budget forecast**
-• "How much can I spend per day?"
-• "When will I run out of budget?"
-• "Am I on pace this month?"
-
-**💡 Personalized advice**
-• "Tips to save money" — I'll suggest cuts based on YOUR actual data
-• "Am I overspending anywhere?"
-
-**➕ Quick add (no forms!)**
-• "Spent ₹500 on food"
-• "₹1200 rent, ₹300 groceries" — adds multiple at once`
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({
+        message: 'Message is required'
       });
     }
 
     const userId = req.user.userId;
-
     const user = await User.findById(userId);
-    if (!user || !user.budget) {
+
+    if (!user || user.budget == null || user.budget <= 0) {
       return res.status(403).json({
-        reply: 'Please set your monthly budget first before I can help you.'
+        reply: 'Please set a valid monthly budget first.'
       });
     }
 
-    // Build rich context for AI
-    const spending = await buildSpendingContext(userId, user.budget);
+    // ----------------------------
+    // Pending date flow
+    // ----------------------------
+    if (draftExpense && typeof draftExpense === 'object') {
+      const resolvedDate =
+        parseRelativeDate(message.trim()) ||
+        parseExplicitDate(message.trim());
 
-    let addedExpenses = [];
-
-    // -------- UPI/SMS + EXPENSE EXTRACTION ----------
-    if (intent === 'UPI_SMS' || intent === 'EXPENSE') {
-      try {
-        const extraction = await groq.chat.completions.create({
-          messages: [
-            {
-              role: 'system',
-              content: `Extract ALL expenses from the user's message. The message may be a UPI notification, bank SMS, or natural language.
-Today's date is ${new Date().toISOString().split('T')[0]}.
-
-Return ONLY JSON:
-{
-  "expenses": [
-    { "amount": number, "category": string, "description": string, "date": "YYYY-MM-DD" }
-  ]
-}
-
-Rules:
-- Parse UPI messages like "Paid ₹450 to Swiggy via UPI" → amount: 450, category: Food, description: Swiggy
-- Parse bank SMS like "INR 1,200 debited at Amazon" → amount: 1200, category: Shopping, description: Amazon
-- Parse natural text like "Spent 500 on food" → amount: 500, category: Food
-- Identify merchant names and map to categories: Swiggy/Zomato→Food, Amazon/Flipkart→Shopping, Uber/Ola→Transportation, Netflix/Hotstar→Entertainment, etc.
-- For date: extract from message if mentioned ("yesterday", "last Monday", "on 15th", date in SMS). If no date mentioned, use today: ${new Date().toISOString().split('T')[0]}
-- Date must be in YYYY-MM-DD format and must not be in the future or older than 1 year
-- Ignore invalid or zero amounts
-- Categories must be from: ${VALID_CATEGORIES.join(', ')}
-- Pick the best matching category based on the merchant/description
-- If no category fits, use "Others"
-- If no valid expenses found → { "expenses": [] }`
-            },
-            { role: 'user', content: message }
-          ],
-          model: EXTRACTION_MODEL,
-          temperature: 0,
-          response_format: { type: 'json_object' }
+      if (!isValidExpenseDate(resolvedDate)) {
+        return res.json({
+          reply: 'Please provide a valid date like today, yesterday, or YYYY-MM-DD.',
+          needsDate: true,
+          draftExpense
         });
+      }
 
-        const parsed = safeJSONParse(extraction.choices[0].message.content);
+      const savedExpense = await Expense.create({
+        userId,
+        amount: Number(draftExpense.amount),
+        category: normalizeCategory(draftExpense.category),
+        description: draftExpense.description || '',
+        date: resolvedDate
+      });
 
-        if (parsed && Array.isArray(parsed.expenses)) {
-          for (const item of parsed.expenses) {
-            const amount = parseInt(item.amount);
+      const stats = await loadExpenseStats(userId, user.budget);
 
-            if (!amount || amount <= 0 || amount > 10000000) continue;
+      return res.json({
+        reply: `Added ${formatCurrency(savedExpense.amount)} to ${normalizeCategory(savedExpense.category)} on ${resolvedDate.toLocaleDateString('en-IN')}. Spent: ${formatCurrency(stats.totalSpent)}. Remaining: ${formatCurrency(stats.remaining)}.`,
+        intent: 'ADD_EXPENSE',
+        expenseAdded: true,
+        expenses: [savedExpense],
+        needsDate: false
+      });
+    }
 
-            // Validate extracted date — must be within last 1 year and not future
-            let expenseDate = new Date();
-            if (item.date) {
-              const parsed = new Date(item.date);
-              const oneYearAgo = new Date();
-              oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-              if (!isNaN(parsed.getTime()) && parsed <= new Date() && parsed >= oneYearAgo) {
-                expenseDate = parsed;
-              }
-            }
+    // ----------------------------
+    // Intent extraction
+    // ----------------------------
+    const extracted = await extractIntent(message.trim());
 
-            const newExpense = await Expense.create({
-              userId,
-              amount,
-              category: VALID_CATEGORIES.includes(item.category)
-                ? item.category
-                : 'Others',
-              description: item.description || '',
-              date: expenseDate
-            });
+    if (extracted.intent === 'HELP') {
+      return res.json({
+        reply:
+          `I can help with:\n` +
+          `• Add expense: "Spent 250 on Food"\n` +
+          `• Paste UPI/SMS to log expense\n` +
+          `• Budget status: "How much did I spend?"\n` +
+          `• Remaining budget: "What is left?"\n` +
+          `• Daily limit: "How much can I spend per day?"\n` +
+          `• Spending tips: "Give me tips to reduce spending"\n` +
+          `• Recent expenses: "Show last 5 expenses"\n` +
+          `• Top category: "Which category is highest?"\n` +
+          `• What-if: "What happens if I spend 980 today?"\n` +
+          `• Recurring what-if: "What if I spend 200 every day?"`
+      });
+    }
 
-            addedExpenses.push(newExpense);
-          }
-        }
-      } catch (err) {
-        // fallback (single)
-        const fallback = extractExpenseFromKeywords(message);
+    // ----------------------------
+    // Add expense flow
+    // ----------------------------
+    if (extracted.intent === 'ADD_EXPENSE') {
+      const validExpenses = extracted.expenses
+        .map((item) => ({
+          amount: parseInt(item.amount, 10),
+          category: normalizeCategory(item.category),
+          description:
+            typeof item.description === 'string'
+              ? item.description.trim().slice(0, 120)
+              : '',
+          date: item.date || null
+        }))
+        .filter((item) => item.amount > 0 && item.amount <= 10000000);
 
-        if (fallback) {
-          const newExpense = await Expense.create({
+      if (!validExpenses.length) {
+        return res.json({
+          reply: 'I could not detect a valid expense. Try: "Spent 250 on Food".',
+          intent: 'ADD_EXPENSE',
+          expenseAdded: false,
+          expenses: []
+        });
+      }
+
+      if (validExpenses.length === 1 && !validExpenses[0].date) {
+        return res.json({
+          reply: 'What date should I record this expense for? Reply with today, yesterday, or YYYY-MM-DD.',
+          intent: 'ADD_EXPENSE',
+          expenseAdded: false,
+          expenses: [],
+          needsDate: true,
+          draftExpense: validExpenses[0]
+        });
+      }
+
+      const missingDate = validExpenses.find((e) => !e.date);
+      if (missingDate) {
+        return res.json({
+          reply: 'One or more expenses are missing a date. Please add dates when logging multiple expenses.',
+          intent: 'ADD_EXPENSE',
+          expenseAdded: false,
+          expenses: [],
+          needsDate: false
+        });
+      }
+
+      const docsToInsert = validExpenses
+        .map((item) => {
+          const parsedDate = parseExplicitDate(item.date);
+          if (!isValidExpenseDate(parsedDate)) return null;
+
+          return {
             userId,
-            amount: fallback.amount,
-            category: fallback.category,
-            description: fallback.description,
-            date: new Date()
-          });
+            amount: item.amount,
+            category: item.category,
+            description: item.description,
+            date: parsedDate
+          };
+        })
+        .filter(Boolean);
 
-          addedExpenses.push(newExpense);
+      if (!docsToInsert.length) {
+        return res.json({
+          reply: 'I could not detect a valid expense date. Use today, yesterday, or YYYY-MM-DD.',
+          intent: 'ADD_EXPENSE',
+          expenseAdded: false,
+          expenses: []
+        });
+      }
+
+      const created = await Expense.insertMany(docsToInsert);
+      const stats = await loadExpenseStats(userId, user.budget);
+
+      if (created.length === 1) {
+        return res.json({
+          reply: `Added ${formatCurrency(created[0].amount)} to ${normalizeCategory(created[0].category)}. Spent: ${formatCurrency(stats.totalSpent)}. Remaining: ${formatCurrency(stats.remaining)}.`,
+          intent: 'ADD_EXPENSE',
+          expenseAdded: true,
+          expenses: created,
+          needsDate: false
+        });
+      }
+
+      const totalAdded = created.reduce(
+        (sum, expense) => sum + Number(expense.amount || 0),
+        0
+      );
+
+      return res.json({
+        reply: `Added ${created.length} expenses totaling ${formatCurrency(totalAdded)}. Spent: ${formatCurrency(stats.totalSpent)}. Remaining: ${formatCurrency(stats.remaining)}.`,
+        intent: 'ADD_EXPENSE',
+        expenseAdded: true,
+        expenses: created,
+        needsDate: false
+      });
+    }
+
+    // ----------------------------
+    // Stats for all non-add flows
+    // ----------------------------
+    const stats = await loadExpenseStats(userId, user.budget);
+
+    if (extracted.intent === 'GET_STATUS') {
+      return res.json({
+        reply: `Budget: ${formatCurrency(user.budget)}. Spent: ${formatCurrency(stats.totalSpent)}. Remaining: ${formatCurrency(stats.remaining)}. Used: ${stats.spentPercent}%.`,
+        intent: 'GET_STATUS',
+        expenseAdded: false,
+        expenses: []
+      });
+    }
+
+    if (extracted.intent === 'GET_REMAINING') {
+      return res.json({
+        reply: `Remaining budget: ${formatCurrency(stats.remaining)}.`,
+        intent: 'GET_REMAINING',
+        expenseAdded: false,
+        expenses: []
+      });
+    }
+
+    if (extracted.intent === 'GET_BURNDOWN') {
+      if (stats.thisMonthSpent <= 0) {
+        return res.json({
+          reply: 'There is not enough spending data this month to forecast your budget yet. Add a few expenses first.',
+          intent: 'GET_BURNDOWN',
+          expenseAdded: false,
+          expenses: []
+        });
+      }
+
+      let reply = `You have ${formatCurrency(stats.remaining)} left for ${stats.daysLeft} day${stats.daysLeft > 1 ? 's' : ''}, which is about ${formatCurrency(stats.dailyLimit)} per day.`;
+
+      // Only show burn/projection if data is not tiny
+      if (stats.monthExpenses.length >= 3 && stats.thisMonthSpent >= 100) {
+        if (stats.currentDailyBurnRate > 0) {
+          reply += ` Your current daily burn rate is ${formatCurrency(stats.currentDailyBurnRate)}.`;
+        }
+
+        if (stats.projectedMonthTotal != null) {
+          reply += ` Projected month-end spend: ${formatCurrency(stats.projectedMonthTotal)}.`;
         }
       }
+
+      return res.json({
+        reply,
+        intent: 'GET_BURNDOWN',
+        expenseAdded: false,
+        expenses: []
+      });
     }
 
-    // -------- Build system prompt based on intent ----------
-    let systemPrompt;
-
-    if (intent === 'BURNDOWN') {
-      if (spending.thisMonthTotal === 0) {
-        systemPrompt = `You are a friendly expense assistant. The user asked about budget forecasting but has no spending data this month.
-
-${spending.context}
-
-Rules:
-• Tell them you can't forecast yet because there's no spending data this month
-• Suggest adding a few expenses first — type "Spent ₹X on Y" or paste a UPI/bank SMS
-• Once they have a few days of data, your forecast will be accurate
-• Keep it under 50 words`;
-      } else {
-        systemPrompt = `You are a smart budget forecaster. The user wants to know about their spending pace and daily limits.
-
-${spending.context}
-
-Rules:
-• Focus on the Budget Forecast section — daily limit, burn rate, projected totals
-• Be specific: "You can spend ₹X per day for the next Y days"
-• If they'll overshoot, warn them clearly with exact numbers
-• If they're on track, be encouraging
-• Mention how many days are left in the month
-• Keep it under 80 words
-• Use ₹`;
-      }
-
-    } else if (intent === 'UPI_SMS' && addedExpenses.length > 0) {
-      const addedSummary = addedExpenses.map(e => `₹${e.amount} — ${e.category}${e.description ? ' (' + e.description + ')' : ''}`).join(', ');
-      systemPrompt = `You are a friendly expense assistant. The user pasted a UPI notification or bank SMS and you extracted and saved the expense(s).
-
-${spending.context}
-
-Just added from UPI/SMS: ${addedSummary}
-
-Rules:
-• Confirm what was extracted and saved with a ✓
-• Show the merchant name and category you picked
-• Show updated remaining budget
-• Keep it under 50 words
-• Use ₹`;
-
-    } else if (intent === 'ADVICE') {
-      const hasEnoughData = spending.totalSpent > 0;
-      const budgetTooLow = user.budget < 1000;
-
-      if (!hasEnoughData) {
-        systemPrompt = `You are a friendly expense assistant. The user asked for saving advice but doesn't have enough spending data yet.
-
-${spending.context}
-
-Rules:
-• Politely tell them you need more expense data to give personalized tips
-• Suggest they track expenses for a week or two first
-• Mention they can add expenses quickly by typing "Spent ₹X on Y" or pasting UPI/bank SMS
-${budgetTooLow ? '• Their budget is ₹' + user.budget + ' which is very low — suggest setting a realistic monthly budget (like ₹5,000–₹50,000) that reflects actual monthly expenses' : ''}
-• Keep it under 60 words
-• Be encouraging`;
-      } else if (budgetTooLow) {
-        systemPrompt = `You are a personal finance advisor. The user's budget is unrealistically low at ₹${user.budget}.
-
-${spending.context}
-
-Rules:
-• Point out that a budget of ₹${user.budget} is too low to give meaningful saving tips
-• Suggest setting a realistic monthly budget that matches their actual income/expenses (e.g., ₹5,000–₹50,000 depending on lifestyle)
-• Mention that a proper budget helps track spending % and get real insights
-• If they already overspent their tiny budget, note that — it confirms the budget is too low
-• Keep it under 80 words
-• Use ₹, be helpful not preachy`;
-      } else {
-        systemPrompt = `You are a personal finance advisor. Give practical, personalized advice based on the user's real spending data.
-
-${spending.context}
-
-Rules:
-• Give 3-4 specific, actionable tips based on THEIR data
-• ONLY use the exact numbers from the data above — never make up or estimate numbers
-• Reference their actual numbers (e.g., "You spend ₹X on Food which is Y% of your budget")
-• Use the Budget Forecast section: mention their exact daily limit and days left in the month
-• Suggest realistic cuts — don't say "stop spending", say "try reducing Food by 20% to save ₹Z"
-• If total spending is very small (under ₹500), focus on building good tracking habits rather than cutting specific categories
-• Keep it under 120 words
-• Use ₹ for amounts
-• Be encouraging, not judgmental`;
-      }
-
-    } else if (intent === 'EXPENSE' && addedExpenses.length > 0) {
-      const addedSummary = addedExpenses.map(e => `₹${e.amount} (${e.category})`).join(', ');
-      systemPrompt = `You are a friendly expense assistant. Confirm the expense(s) were added.
-
-${spending.context}
-
-Just added: ${addedSummary}
-
-Rules:
-• Confirm what was added with a ✓
-• Show updated remaining budget
-• If they're over 80% budget usage, add a brief warning
-• Keep it under 50 words
-• Use ₹`;
-
-    } else {
-      systemPrompt = `You are a helpful expense assistant with access to the user's spending data.
-
-${spending.context}
-
-Rules:
-• Answer based on real data when relevant
-• Max 80 words
-• Use ₹ for amounts
-• Be conversational but concise
-• If they ask about spending amounts or categories, briefly answer but suggest checking the Analytics tab for charts
-• If they seem to be trying to add an expense, guide them to say "Spent ₹X on Y"
-• If they ask something forecast-related, give daily limit and burndown info from the Budget Forecast data`;
+    if (extracted.intent === 'GET_ADVICE') {
+      return res.json({
+        reply: buildAdviceReply({
+          budget: user.budget,
+          totalSpent: stats.totalSpent,
+          remaining: stats.remaining,
+          daysLeft: stats.daysLeft,
+          dailyLimit: stats.dailyLimit,
+          monthExpenses: stats.monthExpenses,
+          topCategory: stats.topCategory
+        }),
+        intent: 'GET_ADVICE',
+        expenseAdded: false,
+        expenses: []
+      });
     }
 
-    // -------- CHAT RESPONSE ----------
-    const chat = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
-      ],
-      model: CHAT_MODEL,
-      temperature: intent === 'BURNDOWN' ? 0.3 : 0.5
-    });
+    if (extracted.intent === 'GET_RECENT_EXPENSES') {
+      return res.json({
+        reply: formatRecentExpenses(stats.allExpenses, extracted.limit || 5),
+        intent: 'GET_RECENT_EXPENSES',
+        expenseAdded: false,
+        expenses: []
+      });
+    }
+
+    if (extracted.intent === 'GET_TOP_CATEGORY') {
+      if (!stats.topCategory) {
+        return res.json({
+          reply: 'No expenses found this month yet.',
+          intent: 'GET_TOP_CATEGORY',
+          expenseAdded: false,
+          expenses: []
+        });
+      }
+
+      return res.json({
+        reply: `Your top spending category this month is ${stats.topCategory.category} at ${formatCurrency(stats.topCategory.amount)}.`,
+        intent: 'GET_TOP_CATEGORY',
+        expenseAdded: false,
+        expenses: []
+      });
+    }
+
+    if (extracted.intent === 'GET_CATEGORY_SPEND') {
+      const requestedCategory = normalizeCategory(extracted.category || 'Others');
+      const found = stats.sortedCategories.find(
+        (item) => item.category === requestedCategory
+      );
+
+      return res.json({
+        reply: `${requestedCategory} spending this month: ${formatCurrency(found ? found.amount : 0)}.`,
+        intent: 'GET_CATEGORY_SPEND',
+        expenseAdded: false,
+        expenses: []
+      });
+    }
+
+    if (extracted.intent === 'WHAT_IF') {
+      const amount = extracted.amount || extractAmountFromText(message);
+      const recurring = isRecurringScenario(message);
+
+      if (!amount) {
+        return res.json({
+          reply: 'Please specify an amount. Example: "What happens if I spend ₹500 today?"',
+          intent: 'WHAT_IF',
+          expenseAdded: false,
+          expenses: []
+        });
+      }
+
+      return res.json({
+        reply: buildWhatIfReply({
+          amount,
+          stats,
+          budget: user.budget,
+          recurring
+        }),
+        intent: 'WHAT_IF',
+        expenseAdded: false,
+        expenses: []
+      });
+    }
 
     return res.json({
-      reply: chat.choices[0].message.content,
-      intent,
-      expenseAdded: addedExpenses.length > 0,
-      expenses: addedExpenses
+      reply: 'I can help with expense logging, UPI/SMS parsing, budget status, daily limit, spending tips, recent expenses, and what-if calculations based on your actual data.',
+      intent: 'UNKNOWN',
+      expenseAdded: false,
+      expenses: []
     });
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
+    console.error('AI chat error:', err);
+    return res.status(500).json({
       reply: 'Something went wrong. Please try again.'
     });
   }
