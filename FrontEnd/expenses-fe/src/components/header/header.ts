@@ -1,6 +1,6 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faIndianRupeeSign,faPlus,faCircleHalfStroke,faMoon, faSignOut, faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faIndianRupeeSign,faPlus,faCircleHalfStroke,faMoon, faSignOut, faBars, faXmark, faReceipt } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from "../add-expense/add-expense";
 import { UserContent } from '../user-content/user-content';
 import { Router } from '@angular/router';
@@ -18,7 +18,7 @@ export class Header implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   constructor(library: FaIconLibrary, private router: Router,private expenseSer:ExpensesService){
-    library.addIcons(faIndianRupeeSign,faPlus,faCircleHalfStroke,faMoon, faSignOut, faBars, faXmark)
+    library.addIcons(faIndianRupeeSign,faPlus,faCircleHalfStroke,faMoon, faSignOut, faBars, faXmark, faReceipt)
 
   }
 
