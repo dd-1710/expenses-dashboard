@@ -4,16 +4,11 @@ A full-stack expense tracking application with budget analytics, interactive cha
 
 ## Screenshots
 
-<!-- Add your screenshots here -->
-<!-- ![Login](screenshots/login.png) -->
-<!-- ![Dashboard](screenshots/dashboard.png) -->
-<!-- ![Analytics](screenshots/analytics.png) -->
-<!-- ![AI Chat](screenshots/ai-chat.png) -->
-![Login](image.png)
-![ViewBudget](image-1.png)
-![Charts](image-2.png)
-![AddExpense](image-3.png)
-![AI-Chat](image-4.png)
+![Login_Page](Login_Page.png)
+![View_DashBoard](Expense_DashBoard.png)
+!![Visual_Charts](Charts.png)
+![Add_Expense](Expense_Form.png)
+![AI-Chat](Chat_Tab.png)
 
 
 ## Tech Stack
@@ -95,6 +90,7 @@ PORT=7000
 MONGO_URI=your_mongodb_connection_string
 jwt_secret_key=your_secret_key
 GROQ_API_KEY=your_groq_api_key
+ALLOWED_ORIGINS=http://localhost:5000
 ```
 
 ```bash
