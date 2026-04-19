@@ -46,6 +46,8 @@ router.post('/aichat', authMiddleware, async (req, res) => {
       });
     }
 
+    const trimmedMessage = message.trim().slice(0, 500);
+
     const userId = req.user.userId;
     const user = await User.findById(userId);
 
@@ -62,7 +64,7 @@ router.post('/aichat', authMiddleware, async (req, res) => {
 
       // Step 1: Resolve category if still missing
       if (!draftExpense.category) {
-        const resolvedCategory = resolveCategory(message.trim());
+        const resolvedCategory = resolveCategory(trimmedMessage);
         if (!resolvedCategory) {
           return res.json({
             reply: `I didn't recognise that category. Please pick one: ${VALID_CATEGORIES.join(', ')}.`,
@@ -84,8 +86,8 @@ router.post('/aichat', authMiddleware, async (req, res) => {
 
       // Step 2: Resolve date
       const resolvedDate =
-        parseRelativeDate(message.trim()) ||
-        parseExplicitDate(message.trim());
+        parseRelativeDate(trimmedMessage) ||
+        parseExplicitDate(trimmedMessage);
 
       if (!isValidExpenseDate(resolvedDate)) {
         return res.json({
@@ -121,7 +123,7 @@ router.post('/aichat', authMiddleware, async (req, res) => {
     // ----------------------------
     // Intent extraction
     // ----------------------------
-    const extracted = await extractIntent(message.trim(), groq);
+    const extracted = await extractIntent(trimmedMessage, groq);
 
     if (extracted.intent === 'HELP') {
       return res.json({

@@ -1,10 +1,10 @@
-import { Component, DestroyRef, EventEmitter, inject, Input, Output } from '@angular/core';
+import { AfterViewChecked, Component, DestroyRef, ElementRef, EventEmitter, inject, Input, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ExpensesService } from '../../services/expensesService';
 import { FaIconLibrary, FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { SafeHtmlPipe } from '../../pipes/safe-html.pipe';
 import { faRobot, faPaperPlane, faUser, faTriangleExclamation, faClock, faChartLine, faLightbulb, faMobileScreen } from '@fortawesome/free-solid-svg-icons';
 
 export interface ChatMsg {
@@ -15,12 +15,14 @@ export interface ChatMsg {
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [FaIconComponent, CommonModule, FormsModule],
+  imports: [FaIconComponent, CommonModule, FormsModule, SafeHtmlPipe],
   templateUrl: './ai-chat.html',
   styleUrls: ['./ai-chat.css']
 })
-export class AiChat {
+export class AiChat implements AfterViewChecked {
   private destroyRef = inject(DestroyRef);
+  @ViewChild('chatContainer') private chatContainer!: ElementRef<HTMLDivElement>;
+  private shouldScroll = false;
 
   @Input() budget: number = 0;
   @Input() totalSpent: number = 0;
@@ -36,10 +38,23 @@ export class AiChat {
 
   constructor(
     private expenseSer: ExpensesService,
-    private sanitizer: DomSanitizer,
     library: FaIconLibrary
   ) {
     library.addIcons(faRobot, faPaperPlane, faUser, faTriangleExclamation, faClock, faChartLine, faLightbulb, faMobileScreen);
+  }
+
+  ngAfterViewChecked() {
+    if (this.shouldScroll) {
+      this.scrollToBottom();
+      this.shouldScroll = false;
+    }
+  }
+
+  private scrollToBottom() {
+    const el = this.chatContainer?.nativeElement;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   }
 
   get smartSuggestions(): { label: string; icon: string; message: string }[] {
@@ -79,6 +94,7 @@ export class AiChat {
     this.messages.push({ text: userText, isUser: true });
     this.userText = '';
     this.isLoading = true;
+    this.shouldScroll = true;
 
     const draft = this.pendingDraftExpense;
     this.pendingDraftExpense = null;
@@ -87,6 +103,7 @@ export class AiChat {
       next: (res) => {
         this.isLoading = false;
         this.messages.push({ text: res.reply, isUser: false });
+        this.shouldScroll = true;
 
         if ((res.needsDate || res.needsCategory) && res.draftExpense) {
           this.pendingDraftExpense = res.draftExpense;
@@ -107,16 +124,4 @@ export class AiChat {
     });
   }
 
-  formatBotReply(text: string): SafeHtml {
-    let html = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^[\u2022\-\*]\s+(.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-      .replace(/<\/ul>\s*<ul>/g, '')
-      .replace(/\n/g, '<br>');
-    return this.sanitizer.bypassSecurityTrustHtml(html);
-  }
 }
