@@ -35,7 +35,7 @@
         </div>
         <p class="text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100">
           @if (isEditingBudget) {
-            <input type="number" [(ngModel)]="budget" class="w-full bg-transparent border-b-2 border-emerald-400 dark:border-emerald-500 outline-none text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100 placeholder-emerald-300 dark:placeholder-neutral-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="₹" />
+            <input type="number" [(ngModel)]="budget" min="500" class="w-full bg-transparent border-b-2 border-emerald-400 dark:border-emerald-500 outline-none text-sm sm:text-xl font-bold text-slate-800 dark:text-neutral-100 placeholder-emerald-300 dark:placeholder-neutral-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="₹ Min 500" />
           } @else {
             ₹{{budget | number}}
           }
@@ -369,8 +369,8 @@
   </div>
   }
 
-  @if (activeTab === 'chat') {
+  <div [hidden]="activeTab !== 'chat'">
   <app-ai-chat [budget]="budget" [totalSpent]="totalSpent" [spentPercentage]="spentPercentage" (expenseAdded)="onChatExpenseAdded()"></app-ai-chat>
-  }
+  </div>
 
 </div>

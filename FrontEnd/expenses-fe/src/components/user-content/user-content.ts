@@ -98,6 +98,11 @@ export class UserContent implements OnInit {
   }
   
   saveBudget(){
+    if (this.budget < 500) {
+      this.error = '⚠️ Budget must be at least ₹500';
+      setTimeout(() => { this.error = ''; }, 3000);
+      return;
+    }
     this.expenseSer.updateBudget(this.budget).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res=>{
         this.budget = res.budget;

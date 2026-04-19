@@ -68,8 +68,8 @@ router.get('/get-user-budget',authMiddleware,async(req,res)=>{
 router.put('/update-user-budget',authMiddleware,async(req,res)=>{
     try{
         const {budget} = req.body;
-        if(typeof budget !== 'number' || budget < 0 || budget > 100000000){
-          return res.status(400).json({message:"Budget must be a number between 0 and 10,00,00,000"});
+        if(typeof budget !== 'number' || budget < 500 || budget > 1000000){
+          return res.status(400).json({message:"Budget must be between ₹500 and ₹10,00,000"});
         }
         const id = req.user.userId;
         const updateBudget = await user.findByIdAndUpdate(id,{budget},{new:true});
