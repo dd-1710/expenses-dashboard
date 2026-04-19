@@ -12,8 +12,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',').map(s => s.trim());
+console.log('ALLOWED_ORIGINS:', JSON.stringify(allowedOrigins));
 app.use(cors({
   origin: (origin, callback) => {
+    console.log('Request origin:', JSON.stringify(origin));
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   }
