@@ -8,7 +8,7 @@ A full-stack expense tracking application with budget analytics, interactive cha
 ![View_DashBoard](Expense_DashBoard.png)
 !![Visual_Charts](Charts.png)
 ![Add_Expense](Expense_Form.png)
-![AI-Chat](Chat_Tab.png)
+![AI-Chat](Chat.png)
 
 
 ## Tech Stack
