@@ -63,6 +63,7 @@ export class Login implements OnInit {
     if (this.isSignUp) {
       this.userService.signUp(userName, password).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
+          this.loading = false;
           this.success = res.message;
           setTimeout(()=>{
              this.success = '';
@@ -70,6 +71,7 @@ export class Login implements OnInit {
           },3000)
         },
         error: (err) => {
+          this.loading = false;
           this.error = err.error?.message || "Server is Down";
           setTimeout(()=>{
           this.error = '';

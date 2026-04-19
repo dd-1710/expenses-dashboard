@@ -22,7 +22,8 @@ router.post('/signUp',async(req,res)=>{
         res.status(201).json({message:"User Created Successfully!"});
     }
     catch(err){
-        res.status(500).json({message:'Server Error',error:err.message});
+        console.error('SignUp error:', err);
+        res.status(500).json({message:'Server Error'});
     }
 });
 
@@ -44,31 +45,43 @@ router.post('/signIn',async(req,res)=>{
         res.status(200).json({message:"Logged In Successfully!",token});
     }
     catch(err){
-        res.status(500).json({message:"Server Error",error:err.message});
+        console.error('SignIn error:', err);
+        res.status(500).json({message:"Server Error"});
     }
 })
 
 router.get('/get-user-budget',authMiddleware,async(req,res)=>{
     try{
         const currentUser = await user.findById(req.user.userId);
+        if(!currentUser){
+          return res.status(404).json({message:"User not found"});
+        }
         return res.status(200).json({budget:currentUser.budget});
 
     }
     catch(err){
-      return res.status(500).json({message:"Unable to fetch budget",error:err.message});
+      console.error('Get budget error:', err);
+      return res.status(500).json({message:"Unable to fetch budget"});
     }
 })
 
 router.put('/update-user-budget',authMiddleware,async(req,res)=>{
     try{
         const {budget} = req.body;
+        if(typeof budget !== 'number' || budget < 0 || budget > 100000000){
+          return res.status(400).json({message:"Budget must be a number between 0 and 10,00,00,000"});
+        }
         const id = req.user.userId;
         const updateBudget = await user.findByIdAndUpdate(id,{budget},{new:true});
+        if(!updateBudget){
+          return res.status(404).json({message:"User not found"});
+        }
         return res.status(200).json({budget:updateBudget.budget});
 
     }
     catch(err){
-      return res.status(500).json({message:"Unable to update the budget",error:err.message})
+      console.error('Update budget error:', err);
+      return res.status(500).json({message:"Unable to update the budget"})
     }
 })
 

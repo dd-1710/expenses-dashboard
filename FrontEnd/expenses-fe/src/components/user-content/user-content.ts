@@ -1,25 +1,21 @@
-import { Component, DestroyRef, EventEmitter, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ExpensesService } from '../../services/expensesService';
 import { Expense } from '../../interfaces/addExpense.model';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faHandshake, faWallet, faChevronUp, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser, faLightbulb, faClock, faMobileScreen } from '@fortawesome/free-solid-svg-icons';
+import { faHandshake, faWallet, faChevronUp, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from '../add-expense/add-expense';
+import { AiChat } from '../ai-chat/ai-chat';
 import { BaseChartDirective } from 'ng2-charts';
 import { ArcElement, BarController, BarElement, CategoryScale, Chart, ChartData, DoughnutController, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js';
 
 Chart.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, BarController, DoughnutController, LineController, LineElement, PointElement, Filler);
 
-export interface ChatMsg{
-  text: string,
-  isUser: boolean
-}
 @Component({
   selector: 'app-user-content',
-  imports: [FaIconComponent, CommonModule, FormsModule, AddExpense, BaseChartDirective],
+  imports: [FaIconComponent, CommonModule, FormsModule, AddExpense, AiChat, BaseChartDirective],
   templateUrl: './user-content.html',
   styleUrls: ['./user-content.css'],
   standalone:true,
@@ -59,17 +55,14 @@ export class UserContent implements OnInit {
   'Investment': '#34D399',
   'Others': '#C9CBCF'
 };
-   userText: string = '';
-   messages:ChatMsg[] = []
-   pendingDraftExpense: { amount: number; category: string | null; description?: string; date?: string | null } | null = null;
   page: number = 1;
   limit: number = 3;
   totalCount : number = 0;
   totalPages:number = 0;
   chartCategoryData: { _id: string, total: number }[] = [];
 
-  constructor(private expenseSer:ExpensesService, private sanitizer:DomSanitizer, library:FaIconLibrary){
-   library.addIcons(faHandshake, faWallet, faChevronUp,faChevronLeft, faChevronRight, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser, faLightbulb, faClock, faMobileScreen)
+  constructor(private expenseSer:ExpensesService, library:FaIconLibrary){
+   library.addIcons(faHandshake, faWallet, faChevronUp,faChevronLeft, faChevronRight, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck)
   }
   ngOnInit(){
    this.userMessage();
@@ -254,87 +247,10 @@ export class UserContent implements OnInit {
   }
                                                                      
 
-  isLoading = false;
-
-  get smartSuggestions(): { label: string; icon: string; message: string }[] {
-    const suggestions: { label: string; icon: string; message: string }[] = [];
-
-    if (this.spentPercentage >= 80) {
-      suggestions.push({ label: 'Am I overspending?', icon: 'triangle-exclamation', message: 'Am I overspending? How can I stay within budget?' });
-    }
-
-    if (this.totalSpent > 0) {
-      suggestions.push({ label: 'How much can I spend today?', icon: 'clock', message: 'How much can I spend per day to stay within budget?' });
-      suggestions.push({ label: 'Will my budget last?', icon: 'chart-line', message: 'At my current spending rate, when will I run out of budget?' });
-      suggestions.push({ label: 'Tips to save money', icon: 'lightbulb', message: 'Give me personalized tips to reduce my spending' });
-    }
-
-    if (suggestions.length < 4) {
-      suggestions.push({ label: 'Paste UPI/SMS to add', icon: 'mobile-screen', message: 'How do I add expenses from UPI or bank SMS?' });
-    }
-
-    if (suggestions.length === 0) {
-      suggestions.push({ label: 'What can you do?', icon: 'robot', message: 'What can you do?' });
-      suggestions.push({ label: 'Paste a UPI message', icon: 'mobile-screen', message: 'How do I add expenses from UPI or bank SMS?' });
-    }
-
-    return suggestions.slice(0, 4);
-  }
-
-  useAIChat(userText:string){
-    if(!userText.trim())return;
-    
-    // Check if budget is set before processing
-    if(this.budget === 0 || this.budget === undefined) {
-      this.error = '⚠️  Budget not set! Please set your monthly budget before adding expenses via chat.';
-      setTimeout(() => { this.error = '' }, 4000);
-      return;
-    }
-    
-    this.messages.push({text:userText,isUser:true});
-    this.userText = '';
-    this.isLoading = true;
-
-    const draft = this.pendingDraftExpense;
-    this.pendingDraftExpense = null;
-
-    this.expenseSer.aiChat(userText, draft ?? undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (res)=>{
-        this.isLoading = false;
-        this.messages.push({text:res.reply,isUser:false});
-
-        if ((res.needsDate || res.needsCategory) && res.draftExpense) {
-          this.pendingDraftExpense = res.draftExpense;
-        }
-        
-        if(res.expenseAdded && res.expenses && res.expenses.length > 0) {
-          this.page = 1;
-          this.fetchAllExpenses();
-          this.fetchBudget();
-          const total = res.expenses.reduce((s, e) => s + e.amount, 0);
-          const categories = res.expenses.map(e => e.category).join(', ');
-          this.success = `✓ ${res.expenses.length} expense(s) added: ₹${total} (${categories})`;
-          setTimeout(() => { this.success = '' }, 4000);
-        }
-      },
-      error: ()=>{
-          this.isLoading = false;
-          this.messages.push({text:'Something went wrong. Try again.', isUser: false })
-      }
-    })
-  }
-
-  formatBotReply(text: string): SafeHtml {
-    let html = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^[\u2022\-\*]\s+(.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-      .replace(/<\/ul>\s*<ul>/g, '')
-      .replace(/\n/g, '<br>');
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+  onChatExpenseAdded() {
+    this.page = 1;
+    this.fetchAllExpenses();
+    this.fetchBudget();
   }
   
 }

@@ -1,0 +1,57 @@
+/* Stylish scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Jumping balls loader */
+.animate-bounce-dot {
+  animation: bounceDot 0.6s infinite alternate;
+}
+
+@keyframes bounceDot {
+  0% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* Bot reply formatting */
+.bot-reply ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 6px 0;
+}
+
+.bot-reply li {
+  position: relative;
+  padding-left: 1em;
+}
+
+.bot-reply li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+}
