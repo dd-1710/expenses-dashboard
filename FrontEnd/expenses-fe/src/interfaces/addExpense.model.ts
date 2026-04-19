@@ -24,4 +24,7 @@ export interface AiChatResponse {
     intent?: string;
     expenseAdded?: boolean;
     expenses?: Expense[];
+    needsDate?: boolean;
+    needsCategory?: boolean;
+    draftExpense?: { amount: number; category: string | null; description?: string; date?: string | null };
 }

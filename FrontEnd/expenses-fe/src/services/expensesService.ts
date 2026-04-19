@@ -49,7 +49,9 @@ export class ExpensesService {
         return this.http.put<BudgetResponse>(`${this.apiURL}/api/update-user-budget`, { budget });
     }
 
-    aiChat(message: string): Observable<AiChatResponse> {
-        return this.http.post<AiChatResponse>(`${this.apiURL}/api/aichat`, { message });
+    aiChat(message: string, draftExpense?: { amount: number; category: string | null; description?: string; date?: string | null }): Observable<AiChatResponse> {
+        const body: any = { message };
+        if (draftExpense) body.draftExpense = draftExpense;
+        return this.http.post<AiChatResponse>(`${this.apiURL}/api/aichat`, body);
     }
 }

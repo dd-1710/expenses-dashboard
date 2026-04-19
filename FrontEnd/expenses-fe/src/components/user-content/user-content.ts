@@ -61,6 +61,7 @@ export class UserContent implements OnInit {
 };
    userText: string = '';
    messages:ChatMsg[] = []
+   pendingDraftExpense: { amount: number; category: string | null; description?: string; date?: string | null } | null = null;
   page: number = 1;
   limit: number = 3;
   totalCount : number = 0;
@@ -293,13 +294,23 @@ export class UserContent implements OnInit {
     this.messages.push({text:userText,isUser:true});
     this.userText = '';
     this.isLoading = true;
-    this.expenseSer.aiChat(userText).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+
+    const draft = this.pendingDraftExpense;
+    this.pendingDraftExpense = null;
+
+    this.expenseSer.aiChat(userText, draft ?? undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res)=>{
         this.isLoading = false;
         this.messages.push({text:res.reply,isUser:false});
+
+        if ((res.needsDate || res.needsCategory) && res.draftExpense) {
+          this.pendingDraftExpense = res.draftExpense;
+        }
         
         if(res.expenseAdded && res.expenses && res.expenses.length > 0) {
+          this.page = 1;
           this.fetchAllExpenses();
+          this.fetchBudget();
           const total = res.expenses.reduce((s, e) => s + e.amount, 0);
           const categories = res.expenses.map(e => e.category).join(', ');
           this.success = `✓ ${res.expenses.length} expense(s) added: ₹${total} (${categories})`;

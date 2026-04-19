@@ -77,6 +77,12 @@ function extractAmountFromText(message) {
   return amount;
 }
 
+function resolveCategory(text) {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim().toLowerCase();
+  return VALID_CATEGORIES.find((c) => trimmed.includes(c.toLowerCase())) || null;
+}
+
 function looksLikeUPIOrSMS(message) {
   const msg = String(message || '').toLowerCase();
 
@@ -151,10 +157,9 @@ function isValidExpenseDate(date) {
 
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const oneYearAgo = new Date(today);
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const minDate = new Date(2026, 0, 1); // Jan 1, 2026
 
-  return date <= today && date >= oneYearAgo;
+  return date <= today && date >= minDate;
 }
 
 function isRecurringScenario(message) {
@@ -315,7 +320,7 @@ Schema:
   "expenses": [
     {
       "amount": number,
-      "category": string,
+      "category": string | null,
       "description": string,
       "date": "YYYY-MM-DD" | null
     }
@@ -327,8 +332,10 @@ Schema:
 
 Rules:
 - Use only these categories: ${VALID_CATEGORIES.join(', ')}
+- If the category is not explicitly mentioned or cannot be clearly inferred from the message, return category: null (inside expenses array too). Do NOT default to "Others"
 - UPI or bank SMS may contain merchant and amount. Extract them as ADD_EXPENSE
 - If date is not explicitly present in the message, return date: null
+- If a date is mentioned, it must be between 2026-01-01 and today (${today}). If the year is before 2026, return date: null
 - Never invent multiple expenses unless clearly mentioned
 - "How much did I spend", "budget status", "remaining budget", "what's my budget" => GET_STATUS or GET_REMAINING
 - "How much can I spend per day", "when will budget run out", "forecast" => GET_BURNDOWN
@@ -574,16 +581,44 @@ router.post('/aichat', authMiddleware, async (req, res) => {
     }
 
     // ----------------------------
-    // Pending date flow
+    // Pending draft flow (category / date)
     // ----------------------------
     if (draftExpense && typeof draftExpense === 'object') {
+
+      // Step 1: Resolve category if still missing
+      if (!draftExpense.category) {
+        const resolvedCategory = resolveCategory(message.trim());
+        if (!resolvedCategory) {
+          return res.json({
+            reply: `I didn't recognise that category. Please pick one: ${VALID_CATEGORIES.join(', ')}.`,
+            needsCategory: true,
+            draftExpense
+          });
+        }
+        draftExpense.category = resolvedCategory;
+
+        // Category resolved — now check if date is also missing
+        if (!draftExpense.date) {
+          return res.json({
+            reply: 'What date should I record this expense for? Reply with today, yesterday, or YYYY-MM-DD.',
+            needsDate: true,
+            draftExpense
+          });
+        }
+      }
+
+      // Step 2: Resolve date
       const resolvedDate =
         parseRelativeDate(message.trim()) ||
         parseExplicitDate(message.trim());
 
       if (!isValidExpenseDate(resolvedDate)) {
         return res.json({
-          reply: 'Please provide a valid date like today, yesterday, or YYYY-MM-DD.',
+          reply: resolvedDate && resolvedDate < new Date(2026, 0, 1)
+            ? 'That date is too old. I can only log expenses from January 2026 onwards. Please provide a date between Jan 1, 2026 and today.'
+            : resolvedDate && resolvedDate > new Date()
+              ? 'That date is in the future. Please provide a date up to today.'
+              : 'Please provide a valid date like today, yesterday, or YYYY-MM-DD (from Jan 2026 onwards).',
           needsDate: true,
           draftExpense
         });
@@ -635,15 +670,21 @@ router.post('/aichat', authMiddleware, async (req, res) => {
     // ----------------------------
     if (extracted.intent === 'ADD_EXPENSE') {
       const validExpenses = extracted.expenses
-        .map((item) => ({
-          amount: parseInt(item.amount, 10),
-          category: normalizeCategory(item.category),
-          description:
-            typeof item.description === 'string'
-              ? item.description.trim().slice(0, 120)
-              : '',
-          date: item.date || null
-        }))
+        .map((item) => {
+          const rawCat = item.category && typeof item.category === 'string' ? item.category.trim() : null;
+          const normalized = rawCat ? normalizeCategory(rawCat) : null;
+          // Treat "Others" from LLM as unknown — user should pick the real category
+          const category = normalized === 'Others' ? null : normalized;
+          return {
+            amount: parseInt(item.amount, 10),
+            category,
+            description:
+              typeof item.description === 'string'
+                ? item.description.trim().slice(0, 120)
+                : '',
+            date: item.date || null
+          };
+        })
         .filter((item) => item.amount > 0 && item.amount <= 10000000);
 
       if (!validExpenses.length) {
@@ -655,15 +696,43 @@ router.post('/aichat', authMiddleware, async (req, res) => {
         });
       }
 
-      if (validExpenses.length === 1 && !validExpenses[0].date) {
-        return res.json({
-          reply: 'What date should I record this expense for? Reply with today, yesterday, or YYYY-MM-DD.',
-          intent: 'ADD_EXPENSE',
-          expenseAdded: false,
-          expenses: [],
-          needsDate: true,
-          draftExpense: validExpenses[0]
-        });
+      if (validExpenses.length === 1) {
+        const draft = validExpenses[0];
+        const missingCategory = !draft.category;
+        const missingDateField = !draft.date;
+
+        if (missingCategory && missingDateField) {
+          return res.json({
+            reply: `What category does this belong to? Pick one: ${VALID_CATEGORIES.join(', ')}.`,
+            intent: 'ADD_EXPENSE',
+            expenseAdded: false,
+            expenses: [],
+            needsCategory: true,
+            draftExpense: { amount: draft.amount, category: null, description: draft.description }
+          });
+        }
+
+        if (missingCategory) {
+          return res.json({
+            reply: `What category does this belong to? Pick one: ${VALID_CATEGORIES.join(', ')}.`,
+            intent: 'ADD_EXPENSE',
+            expenseAdded: false,
+            expenses: [],
+            needsCategory: true,
+            draftExpense: { amount: draft.amount, category: null, description: draft.description, date: draft.date }
+          });
+        }
+
+        if (missingDateField) {
+          return res.json({
+            reply: 'What date should I record this expense for? Reply with today, yesterday, or YYYY-MM-DD.',
+            intent: 'ADD_EXPENSE',
+            expenseAdded: false,
+            expenses: [],
+            needsDate: true,
+            draftExpense: draft
+          });
+        }
       }
 
       const missingDate = validExpenses.find((e) => !e.date);
@@ -685,7 +754,7 @@ router.post('/aichat', authMiddleware, async (req, res) => {
           return {
             userId,
             amount: item.amount,
-            category: item.category,
+            category: normalizeCategory(item.category),
             description: item.description,
             date: parsedDate
           };
@@ -694,7 +763,7 @@ router.post('/aichat', authMiddleware, async (req, res) => {
 
       if (!docsToInsert.length) {
         return res.json({
-          reply: 'I could not detect a valid expense date. Use today, yesterday, or YYYY-MM-DD.',
+          reply: 'The date provided is not valid. Only dates from January 2026 to today are accepted. Try again with a valid date.',
           intent: 'ADD_EXPENSE',
           expenseAdded: false,
           expenses: []

@@ -12,13 +12,12 @@ router.post('/add-expense',authMiddleware,async(req,res)=>{
             return res.status(400).json({message:"Category and Amt and Date are required"})
         }
 
-        // Validate date range — not future, not older than 1 year
+        // Validate date range — not future, not before Jan 2026
         const expDate = new Date(date);
         const now = new Date();
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        if(isNaN(expDate.getTime()) || expDate > now || expDate < oneYearAgo){
-            return res.status(400).json({message:"Date must be within the last 1 year and not in the future"})
+        const minDate = new Date(2026, 0, 1);
+        if(isNaN(expDate.getTime()) || expDate > now || expDate < minDate){
+            return res.status(400).json({message:"Date must be between January 2026 and today"})
         }
         
         // Check if user has set a budget

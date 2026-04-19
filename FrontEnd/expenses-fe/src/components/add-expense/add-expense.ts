@@ -56,7 +56,7 @@ export class AddExpense{
     { value: 'Others', label: 'Others', icon: ['fas', 'ellipsis'] },
   ];
 
-  minDate: string = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+  minDate: string = '2026-01-01';
 
   futureDate(control:AbstractControl):ValidationErrors | null{
      const inputDate = control.value;
@@ -69,8 +69,7 @@ export class AddExpense{
 
   tooOldDate(control:AbstractControl):ValidationErrors | null{
      const inputDate = control.value;
-     const oneYearAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
-     if(inputDate && inputDate < oneYearAgo){
+     if(inputDate && inputDate < '2026-01-01'){
       return {tooOldDate:true}
      }
      return null;
