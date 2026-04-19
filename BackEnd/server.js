@@ -11,14 +11,14 @@ const rateLimit = require('express-rate-limit')
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',');
-app.use(helmet());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',').map(s => s.trim());
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   }
 }));
+app.use(helmet());
 app.use(express.json({ limit: '100kb' }));
 
 const authRateLimiter = rateLimit({
