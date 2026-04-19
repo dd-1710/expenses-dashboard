@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ExpensesService } from '../../services/expensesService';
 import { Expense } from '../../interfaces/addExpense.model';
 import { FaIconLibrary,FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faHandshake, faWallet, faChevronUp, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faHandshake, faWallet, faChevronUp, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faReceipt as faReceiptAlt, faPaperPlane, faUser, faLightbulb, faClock, faMobileScreen } from '@fortawesome/free-solid-svg-icons';
 import { AddExpense } from '../add-expense/add-expense';
 import { BaseChartDirective } from 'ng2-charts';
 import { ArcElement, BarController, BarElement, CategoryScale, Chart, ChartData, DoughnutController, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js';
@@ -68,7 +68,7 @@ export class UserContent implements OnInit {
   chartCategoryData: { _id: string, total: number }[] = [];
 
   constructor(private expenseSer:ExpensesService, private sanitizer:DomSanitizer, library:FaIconLibrary){
-   library.addIcons(faHandshake, faWallet, faChevronUp,faChevronLeft, faChevronRight, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser)
+   library.addIcons(faHandshake, faWallet, faChevronUp,faChevronLeft, faChevronRight, faChevronDown, faTriangleExclamation, faCircleExclamation, faArrowTrendUp, faCoins, faSackDollar, faGauge, faReceipt, faChartPie, faRobot, faUtensils, faCartShopping, faCar, faFilm, faFileInvoice, faPen, faTrash, faFloppyDisk, faPlane, faHeartPulse, faShieldHalved, faGraduationCap, faEllipsis, faChartLine, faCircleCheck, faPaperPlane, faUser, faLightbulb, faClock, faMobileScreen)
   }
   ngOnInit(){
    this.userMessage();
@@ -255,6 +255,31 @@ export class UserContent implements OnInit {
 
   isLoading = false;
 
+  get smartSuggestions(): { label: string; icon: string; message: string }[] {
+    const suggestions: { label: string; icon: string; message: string }[] = [];
+
+    if (this.spentPercentage >= 80) {
+      suggestions.push({ label: 'Am I overspending?', icon: 'triangle-exclamation', message: 'Am I overspending? How can I stay within budget?' });
+    }
+
+    if (this.totalSpent > 0) {
+      suggestions.push({ label: 'How much can I spend today?', icon: 'clock', message: 'How much can I spend per day to stay within budget?' });
+      suggestions.push({ label: 'Will my budget last?', icon: 'chart-line', message: 'At my current spending rate, when will I run out of budget?' });
+      suggestions.push({ label: 'Tips to save money', icon: 'lightbulb', message: 'Give me personalized tips to reduce my spending' });
+    }
+
+    if (suggestions.length < 4) {
+      suggestions.push({ label: 'Paste UPI/SMS to add', icon: 'mobile-screen', message: 'How do I add expenses from UPI or bank SMS?' });
+    }
+
+    if (suggestions.length === 0) {
+      suggestions.push({ label: 'What can you do?', icon: 'robot', message: 'What can you do?' });
+      suggestions.push({ label: 'Paste a UPI message', icon: 'mobile-screen', message: 'How do I add expenses from UPI or bank SMS?' });
+    }
+
+    return suggestions.slice(0, 4);
+  }
+
   useAIChat(userText:string){
     if(!userText.trim())return;
     
@@ -273,11 +298,12 @@ export class UserContent implements OnInit {
         this.isLoading = false;
         this.messages.push({text:res.reply,isUser:false});
         
-        if(res.expenseAdded && res.expense) {
-          this.expenses.push(res.expense);
-          this.totalCalculation();
-          this.success = `✓ Expense added: ₹${res.expense.amount} for ${res.expense.category}`;
-          setTimeout(() => { this.success = '' }, 3000);
+        if(res.expenseAdded && res.expenses && res.expenses.length > 0) {
+          this.fetchAllExpenses();
+          const total = res.expenses.reduce((s, e) => s + e.amount, 0);
+          const categories = res.expenses.map(e => e.category).join(', ');
+          this.success = `✓ ${res.expenses.length} expense(s) added: ₹${total} (${categories})`;
+          setTimeout(() => { this.success = '' }, 4000);
         }
       },
       error: ()=>{

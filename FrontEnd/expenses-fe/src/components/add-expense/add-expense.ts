@@ -56,6 +56,8 @@ export class AddExpense{
     { value: 'Others', label: 'Others', icon: ['fas', 'ellipsis'] },
   ];
 
+  minDate: string = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+
   futureDate(control:AbstractControl):ValidationErrors | null{
      const inputDate = control.value;
      const today = new Date().toISOString().split('T')[0];
@@ -65,12 +67,21 @@ export class AddExpense{
      return null;
   }
 
+  tooOldDate(control:AbstractControl):ValidationErrors | null{
+     const inputDate = control.value;
+     const oneYearAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+     if(inputDate && inputDate < oneYearAgo){
+      return {tooOldDate:true}
+     }
+     return null;
+  }
+
   buildForm(){
     this.addExpenseForm = this.fb.group({
         amount: ['',[Validators.required,Validators.min(1)]],
         category: ['',Validators.required],
         description: ['',[Validators.minLength(0),Validators.maxLength(300)]],
-        date: ['',[Validators.required,this.futureDate]],
+        date: ['',[Validators.required,this.futureDate,this.tooOldDate]],
       })
 
   }

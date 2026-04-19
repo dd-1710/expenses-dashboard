@@ -21,6 +21,7 @@ export interface BudgetResponse {
 
 export interface AiChatResponse {
     reply: string;
+    intent?: string;
     expenseAdded?: boolean;
-    expense?: Expense;
+    expenses?: Expense[];
 }
