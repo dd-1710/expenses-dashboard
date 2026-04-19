@@ -12,7 +12,7 @@ if (GROQ_API_KEY) {
   groq = new Groq({ apiKey: GROQ_API_KEY });
 }
 
-const CHAT_MODEL = 'llama-3.3-70b-versatile';
+const CHAT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const EXTRACTION_MODEL = 'llama-3.3-70b-versatile';
 
 const VALID_CATEGORIES = [
@@ -393,7 +393,8 @@ Rules:
 • Use ₹`;
 
     } else if (intent === 'ADVICE') {
-      const hasEnoughData = spending.totalSpent > 0 && spending.categoryData.length >= 2;
+      const hasEnoughData = spending.totalSpent > 0;
+      const budgetTooLow = user.budget < 1000;
 
       if (!hasEnoughData) {
         systemPrompt = `You are a friendly expense assistant. The user asked for saving advice but doesn't have enough spending data yet.
@@ -404,9 +405,21 @@ Rules:
 • Politely tell them you need more expense data to give personalized tips
 • Suggest they track expenses for a week or two first
 • Mention they can add expenses quickly by typing "Spent ₹X on Y" or pasting UPI/bank SMS
-• If their budget is very low (under ₹1000), suggest setting a realistic monthly budget first
+${budgetTooLow ? '• Their budget is ₹' + user.budget + ' which is very low — suggest setting a realistic monthly budget (like ₹5,000–₹50,000) that reflects actual monthly expenses' : ''}
 • Keep it under 60 words
 • Be encouraging`;
+      } else if (budgetTooLow) {
+        systemPrompt = `You are a personal finance advisor. The user's budget is unrealistically low at ₹${user.budget}.
+
+${spending.context}
+
+Rules:
+• Point out that a budget of ₹${user.budget} is too low to give meaningful saving tips
+• Suggest setting a realistic monthly budget that matches their actual income/expenses (e.g., ₹5,000–₹50,000 depending on lifestyle)
+• Mention that a proper budget helps track spending % and get real insights
+• If they already overspent their tiny budget, note that — it confirms the budget is too low
+• Keep it under 80 words
+• Use ₹, be helpful not preachy`;
       } else {
         systemPrompt = `You are a personal finance advisor. Give practical, personalized advice based on the user's real spending data.
 
@@ -416,7 +429,7 @@ Rules:
 • Give 3-4 specific, actionable tips based on THEIR data
 • Reference their actual numbers (e.g., "You spend ₹X on Food which is Y% of your budget")
 • Suggest realistic cuts — don't say "stop spending", say "try reducing Food by 20% to save ₹Z"
-• If the budget itself seems unrealistically low for their spending, suggest increasing the budget to a realistic amount
+• If total spending is very small (under ₹500), focus on building good tracking habits rather than cutting specific categories
 • Keep it under 120 words
 • Use ₹ for amounts
 • Be encouraging, not judgmental`;
