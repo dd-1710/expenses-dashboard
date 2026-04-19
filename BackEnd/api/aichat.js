@@ -352,7 +352,18 @@ Rules:
     let systemPrompt;
 
     if (intent === 'BURNDOWN') {
-      systemPrompt = `You are a smart budget forecaster. The user wants to know about their spending pace and daily limits.
+      if (spending.thisMonthTotal === 0) {
+        systemPrompt = `You are a friendly expense assistant. The user asked about budget forecasting but has no spending data this month.
+
+${spending.context}
+
+Rules:
+• Tell them you can't forecast yet because there's no spending data this month
+• Suggest adding a few expenses first — type "Spent ₹X on Y" or paste a UPI/bank SMS
+• Once they have a few days of data, your forecast will be accurate
+• Keep it under 50 words`;
+      } else {
+        systemPrompt = `You are a smart budget forecaster. The user wants to know about their spending pace and daily limits.
 
 ${spending.context}
 
@@ -364,6 +375,7 @@ Rules:
 • Mention how many days are left in the month
 • Keep it under 80 words
 • Use ₹`;
+      }
 
     } else if (intent === 'UPI_SMS' && addedExpenses.length > 0) {
       const addedSummary = addedExpenses.map(e => `₹${e.amount} — ${e.category}${e.description ? ' (' + e.description + ')' : ''}`).join(', ');
@@ -381,7 +393,22 @@ Rules:
 • Use ₹`;
 
     } else if (intent === 'ADVICE') {
-      systemPrompt = `You are a personal finance advisor. Give practical, personalized advice based on the user's real spending data.
+      const hasEnoughData = spending.totalSpent > 0 && spending.categoryData.length >= 2;
+
+      if (!hasEnoughData) {
+        systemPrompt = `You are a friendly expense assistant. The user asked for saving advice but doesn't have enough spending data yet.
+
+${spending.context}
+
+Rules:
+• Politely tell them you need more expense data to give personalized tips
+• Suggest they track expenses for a week or two first
+• Mention they can add expenses quickly by typing "Spent ₹X on Y" or pasting UPI/bank SMS
+• If their budget is very low (under ₹1000), suggest setting a realistic monthly budget first
+• Keep it under 60 words
+• Be encouraging`;
+      } else {
+        systemPrompt = `You are a personal finance advisor. Give practical, personalized advice based on the user's real spending data.
 
 ${spending.context}
 
@@ -389,9 +416,11 @@ Rules:
 • Give 3-4 specific, actionable tips based on THEIR data
 • Reference their actual numbers (e.g., "You spend ₹X on Food which is Y% of your budget")
 • Suggest realistic cuts — don't say "stop spending", say "try reducing Food by 20% to save ₹Z"
+• If the budget itself seems unrealistically low for their spending, suggest increasing the budget to a realistic amount
 • Keep it under 120 words
 • Use ₹ for amounts
 • Be encouraging, not judgmental`;
+      }
 
     } else if (intent === 'EXPENSE' && addedExpenses.length > 0) {
       const addedSummary = addedExpenses.map(e => `₹${e.amount} (${e.category})`).join(', ');
