@@ -4,10 +4,6 @@ const { normalizeCategory, getMonthEnd, getMonthRange, getDaysLeftInMonth } = re
 async function loadExpenseStats(userId, budget) {
   const allExpenses = await Expense.find({ userId }).sort({ date: -1 });
 
-  const totalSpent = allExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  const remaining = Number(budget || 0) - totalSpent;
-  const spentPercent = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
-
   const { start: monthStart, end: monthEndExclusive } = getMonthRange(new Date());
 
   const monthExpenses = allExpenses.filter((e) => {
@@ -19,6 +15,10 @@ async function loadExpenseStats(userId, budget) {
     (sum, e) => sum + Number(e.amount || 0),
     0
   );
+
+  const totalSpent = thisMonthSpent;
+  const remaining = Number(budget || 0) - totalSpent;
+  const spentPercent = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
 
   const daysLeft = getDaysLeftInMonth(new Date());
   const dailyLimit = remaining > 0 ? Math.floor(remaining / daysLeft) : 0;
